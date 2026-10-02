@@ -142,7 +142,13 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
 .yday ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .yday li{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:baseline;border-top:1px solid #f5f0e61f;padding-top:10px}
 .yday li b{font:600 13px var(--f-sans);color:var(--brass-2);text-transform:uppercase;letter-spacing:.08em}
-.yday li p{margin:0;font:italic 300 18px/1.4 var(--f-serif);color:var(--cream)}
+.yday li h4{margin:0 0 4px;font:500 20px/1.25 var(--f-serif);color:var(--cream)}
+.yday li p{margin:0;font:italic 300 17px/1.45 var(--f-serif);color:#f5f0e6e6}
+.ystat{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-top:8px;font-size:12.5px;color:#f5f0e6b3}
+.ychip{border:1px solid #c9a46a66;color:var(--brass-2);border-radius:999px;padding:1px 9px;font-size:12px}
+.yfazit{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;border-top:1px solid #f5f0e633;padding-top:10px;font-size:14px;color:var(--cream)}
+.yfazit b{font:600 11px var(--f-sans);color:var(--brass-2);text-transform:uppercase;letter-spacing:.08em;padding-top:2px}
+@media (max-width:560px){.yday li,.yfazit{grid-template-columns:minmax(0,1fr);gap:4px}}
 /* Rad-Wetter */
 .bike{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:16px 20px;display:grid;gap:12px}
 .bike-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
@@ -411,61 +417,77 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
   let yday = null; // null = lädt, false = Fehler, sonst {label, people:{Name:[Zeilen]}}
   function prevWorkday() { const d = new Date(); do { d.setDate(d.getDate() - 1); } while (d.getDay() === 0 || d.getDay() === 6); return d; }
   function seeded(seed) { let x = hash(seed) || 1; return () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return ((x >>> 0) % 10000) / 10000; }; }
+  // Themen: [Erkennung, Schlagzeilen, Sätze]. Alles satirisch, aber wohlwollend.
   const TOPICS = [
-    [/appeal|einspruch|widerspruch/i, ["schrieb Einsprüche an Amazon, so höflich, dass selbst der Algorithmus kurz gerührt war", "führte eine Brieffreundschaft mit dem Amazon-Appeal-Team, Antwort steht noch aus"]],
-    [/gpsr|hersteller|sicherheits|sdb/i, ["bewies Amazon zum wiederholten Mal, dass ein Produkt einen Hersteller hat", "verbrachte Zeit mit der Produktsicherheitsverordnung, die beiden sind jetzt per Du"]],
-    [/empco|umwelt|claim/i, ["strich so viele Umweltversprechen, dass die Listings jetzt CO2-neutral klingen, ohne es zu sagen", "jagte das Wort „nachhaltig“ durch sämtliche Bullets, bis es aufgab"]],
-    [/bild|foto|a\+|galerie/i, ["schob Bilder hin und her, bis jedes Pixel einen Termin hatte", "fragte sich, warum auf Produktfotos eigentlich nie jemand blinzelt"]],
-    [/titel|bullet|text|listing|seo/i, ["polierte Titel, bis sie glänzten und trotzdem unter 200 Zeichen blieben", "rang mit Bullets, die Bullets haben knapp verloren"]],
-    [/newsletter|flow/i, ["arbeitete an Newslettern, die bald sehr viele Menschen ungelesen archivieren werden, aber schön", "baute Flows, von denen niemand weiß, wohin sie fließen, außer Kirsten"]],
-    [/excel|tabelle|flat file|upload|datei/i, ["hatte eine innige Beziehung zu einer Excel-Datei, Status: kompliziert", "lud ein Flat File hoch und hielt dabei kurz den Atem an"]],
-    [/fall|support|case|ticket/i, ["eröffnete einen Seller-Support-Fall und lernt jetzt Geduld als Kernkompetenz", "erzählte dem Seller Support dieselbe Geschichte zum dritten Mal, diesmal mit Gefühl"]],
-    [/preis|rechnung|mwst|ust|vat/i, ["sprach mit Zahlen, die Zahlen haben zurückgesprochen", "verstand für einen kurzen Moment das europäische Mehrwertsteuersystem und vergaß es sofort wieder"]],
-    [/termin|call|meeting|weekly/i, ["saß in Calls, in denen beschlossen wurde, dass es noch einen Call braucht", "bereitete einen Termin vor, der jetzt besser vorbereitet ist als die meisten Hochzeiten"]],
-    [/mail|antwort|rückfrage|entwurf/i, ["schrieb Mails, manche davon sogar mit Absenden-Klick", "beantwortete Rückfragen, die Rückfragen erzeugten"]],
+    [/appeal|einspruch|widerspruch|sperr|reaktiv/i, ["Diplomatie-Offensive bei Amazon", "Höflichkeit als Geheimwaffe"], ["{p} formulierte Einsprüche so charmant, dass der Amazon-Algorithmus kurz überlegt hat, ob er sich entschuldigen soll", "{p} führte eine Brieffreundschaft mit dem Appeal-Team, Stil: Goethe trifft Seller Central"]],
+    [/gpsr|hersteller|sicherheit|sdb|compliance|zertifikat/i, ["Bürokratie bezwungen", "Neues aus der Paragrafen-Abteilung"], ["{p} bewies Amazon souverän, dass Produkte tatsächlich Hersteller haben, eine Erkenntnis von historischer Tragweite", "{p} und die Produktsicherheitsverordnung sind seit gestern offiziell per Du"]],
+    [/empco|umwelt|claim|nachhaltig/i, ["Grüne Wörter im Faktencheck", "Claim-Detektiv im Einsatz"], ["{p} prüfte Umweltversprechen mit der Gründlichkeit eines Zollbeamten am Freitagnachmittag", "{p} hat das Wort „nachhaltig“ so lange befragt, bis es freiwillig alles gestanden hat"]],
+    [/bild|foto|a\+|galerie|grafik|video|design/i, ["Pixel-Choreografie vom Feinsten", "Bildstrecke mit Weltniveau"], ["{p} schob Bilder hin und her, bis jedes Pixel seinen Lieblingsplatz gefunden hatte", "{p} sorgte für Produktfotos, auf denen sogar die Schatten gut aussehen"]],
+    [/titel|bullet|text|listing|seo|keyword|beschreibung/i, ["Wortschmiede arbeitet auf Hochtouren", "Titel poliert, Glanz garantiert"], ["{p} polierte Titel, bis sie glänzten und trotzdem unter 200 Zeichen blieben", "{p} lieferte sich ein Duell mit den Bullets und gewann nach Punkten"]],
+    [/ads|kampagne|ppc|sponsored|gebot|acos|werbung/i, ["Werbe-Strategin am Steuer", "Gebote mit Fingerspitzengefühl"], ["{p} justierte Gebote mit der Präzision eines Uhrmachers, der nebenbei Excel liebt", "{p} brachte Kampagnen auf Kurs, der ACoS hat kurz respektvoll genickt"]],
+    [/newsletter|flow|klaviyo|shop/i, ["Newsletter mit Herz", "Flows im Fluss"], ["{p} baute Flows, die so elegant fließen, dass der Rhein neidisch wird", "{p} schrieb Newsletter, die man sogar bis zum Ende liest"]],
+    [/excel|tabelle|flat file|upload|datei|sheet|report/i, ["Tabellen-Flüsterer schlägt wieder zu", "Zahlenwerk in Bestform"], ["{p} pflegte eine innige Beziehung zu einer Tabelle, Beziehungsstatus: es läuft", "{p} lud ein Flat File hoch, und es hat einfach geklappt, ohne Drama"]],
+    [/fall|support|case|ticket/i, ["Geduld auf olympischem Niveau", "Support-Saga, nächstes Kapitel"], ["{p} erklärte dem Seller Support die Lage so klar, dass vermutlich ein Schulungsvideo daraus wird", "{p} trainierte Geduld als Disziplin, olympische Norm locker erfüllt"]],
+    [/preis|rechnung|mwst|ust|vat|angebot|kalkulation/i, ["Zahlen sprechen, wir hören zu", "Kalkulation mit Stil"], ["{p} rechnete so sauber, dass der Taschenrechner um ein Autogramm bat", "{p} verstand für einen glorreichen Moment das europäische Mehrwertsteuersystem"]],
+    [/termin|call|meeting|weekly|abstimmung|workshop/i, ["Gipfeltreffen erfolgreich", "Gesprächsführung mit Stil"], ["{p} bereitete Termine vor, die jetzt besser durchdacht sind als die meisten Hochzeiten", "{p} moderierte Abstimmungen so souverän, dass alle danach wussten, wer was macht"]],
+    [/mail|antwort|rückfrage|entwurf|nachricht/i, ["Postfach im Griff", "Antwort-Turbo gezündet"], ["{p} beantwortete Mails schneller, als manche sie lesen", "{p} brachte Klarheit in Rückfragen, die Ruhe im Postfach ist fast unheimlich"]],
   ];
-  const FALLBACK = ["arbeitete still und gründlich, wie ein Ninja mit Trello-Zugang", "erledigte Dinge, über die man nicht spricht, weil sie einfach funktionieren"];
-  const QUIET = ["arbeitete gestern abseits des Boards. Deep Work, Kundengespräche oder einfach verdiente Pause.", "hat Trello gestern geschont. Das Board bedankt sich und ist ausgeruht.", "war gestern im Hintergrund unterwegs. Die besten Dinge passieren oft offline."];
+  const FALLBACK = [["Stiller Profi am Werk", "{p} arbeitete still und gründlich, wie ein Ninja mit Trello-Zugang"], ["Läuft einfach", "{p} erledigte Dinge, über die man nicht spricht, weil sie einfach funktionieren"]];
+  const QUIET = [["Offline-Modus aktiviert", "{p} arbeitete gestern abseits des Boards. Deep Work, Kundengespräche oder einfach verdiente Pause."], ["Trello hatte frei", "{p} hat Trello gestern geschont. Das Board bedankt sich und ist ausgeruht."], ["Leise, aber wirksam", "{p} war gestern im Hintergrund unterwegs. Die besten Dinge passieren oft offline."]];
+  const BILANZ = ["Nerven verloren: keine.", "Kaffeeverbrauch: im grünen Bereich.", "Stimmung: bestens.", "Zufriedenheit des Boards: hoch.", "Laune danach: hervorragend."];
+  const shortTitle = (n) => { const parts = String(n).split(" · "); return (parts.length > 1 ? parts.slice(1).join(" · ") : String(n)).replace(/\s+—\s+[^—]*$/, "").trim(); };
   async function loadYesterday() {
     try {
       const d = prevWorkday(), start = new Date(d); start.setHours(0, 0, 0, 0); const end = new Date(start); end.setDate(end.getDate() + 1);
-      const fetchB = (b) => api(`/boards/${b}/actions`, { filter: "commentCard,updateCard:idList,createCard", since: start.toISOString(), before: end.toISOString(), limit: "500", memberCreator_fields: "fullName" });
+      const fetchB = (b) => api(`/boards/${b}/actions`, { filter: "commentCard,updateCard,createCard", since: start.toISOString(), before: end.toISOString(), limit: "500", memberCreator_fields: "fullName" }).catch(() => []);
       const acts = (await Promise.all([fetchB(BOARD), fetchB(KUNDEN)])).flat();
-      const by = Object.fromEntries(PEOPLE.map((p) => [p, { n: 0, done: 0, cust: {}, text: "" }]));
+      const by = Object.fromEntries(PEOPLE.map((p) => [p, { cards: {}, done: 0, comments: 0, created: 0, cust: {}, text: "" }]));
       for (const a of acts) {
         const who = String((a.memberCreator && a.memberCreator.fullName) || "").split(" ")[0];
         if (!by[who]) continue;
-        const txt = String((a.data && a.data.text) || "");
+        const dd = a.data || {}, txt = String(dd.text || "");
         if (txt.startsWith("🤖")) continue; // Claude-Vorschläge zählen nicht
-        const name = String((a.data && a.data.card && a.data.card.name) || "");
-        const cust = name.split(" · ")[0].split(" (")[0].trim();
-        const b = by[who]; b.n++;
+        const name = String((dd.card && dd.card.name) || ""); if (!name) continue;
+        const b = by[who];
+        if (a.type === "updateCard" && !dd.listAfter && !(dd.old && ("dueComplete" in dd.old || "due" in dd.old || "closed" in dd.old))) continue;
+        b.cards[dd.card.id || name] = name;
+        if (a.type === "commentCard") b.comments++;
+        if (a.type === "createCard") b.created++;
+        if ((dd.listAfter && /erledigt/i.test(dd.listAfter.name || "")) || (dd.old && "dueComplete" in dd.old && dd.card.dueComplete)) b.done++;
+        const cust = name.includes(" · ") ? name.split(" · ")[0].split(" (")[0].trim() : "";
         if (cust && cust.length < 30) b.cust[cust] = (b.cust[cust] || 0) + 1;
-        if (a.type === "updateCard" && /erledigt/i.test((a.data.listAfter && a.data.listAfter.name) || "")) b.done++;
         b.text += " " + name + " " + txt;
       }
-      const people = {};
+      const people = {}, used = new Set(); let teamCards = 0, teamDone = 0;
       for (const p of PEOPLE) {
-        const b = by[p], rnd = seeded(p + dayKey(d));
-        const pick = (arr) => arr[Math.floor(rnd() * arr.length)];
-        if (!b.n) { people[p] = pick(QUIET); continue; }
-        const topCust = Object.entries(b.cust).sort((x, y) => y[1] - x[1]).map(([c]) => c).slice(0, 2);
-        const hits = TOPICS.filter(([re]) => re.test(b.text)).map(([, l]) => l);
-        const line = hits.length ? pick(pick(hits)) : pick(FALLBACK);
-        let out = `${topCust.length ? `${topCust.join(" und ")}: ` : ""}${p} ${line}.`;
-        if (b.done >= 3) out += ` Nebenbei ${b.done} Karten erledigt. Respekt.`;
-        else if (b.done) out += ` Und hat ${b.done === 1 ? "eine Karte" : b.done + " Karten"} nach „Erledigt“ getragen.`;
-
-        people[p] = out;
+        const b = by[p], rnd = seeded(p + dayKey(d)), n = Object.keys(b.cards).length;
+        const pick = (arr) => { const free = arr.filter((x) => !used.has(String(x))); const pool = free.length ? free : arr; const v = pool[Math.floor(rnd() * pool.length)]; used.add(String(v)); return v; };
+        const fill = (t) => t.replace(/\{p\}/g, p);
+        teamCards += n; teamDone += b.done;
+        if (!n) { const [h, t] = pick(QUIET); people[p] = { head: h, text: fill(t), chips: [], stat: "" }; continue; }
+        const topCust = Object.entries(b.cust).sort((x, y) => y[1] - x[1]).map(([c]) => c).slice(0, 3);
+        const hits = TOPICS.map(([re, heads, lines]) => ({ heads, lines, c: (b.text.match(new RegExp(re.source, "gi")) || []).length })).filter((h) => h.c).sort((x, y) => y.c - x.c);
+        let head, sents = [];
+        if (hits.length) {
+          head = pick(hits[0].heads);
+          sents.push(fill(pick(hits[0].lines)) + ".");
+          if (hits[1]) sents.push("Und als wäre das nicht genug: " + fill(pick(hits[1].lines)) + ".");
+        } else { const [h, t] = pick(FALLBACK); head = h; sents.push(fill(t) + "."); }
+        const titles = [...new Set(Object.values(b.cards).map((t) => shortTitle(t).replace(/\s*\([^)]*\)/g, "").replace(/\s+[–-]\s+.*$/, "").trim()).filter((t) => t && t.length < 55))].slice(0, 2);
+        if (titles.length) sents.push(`Ganz oben auf dem Stapel: ${titles.map((t) => `„${t}“`).join(" und ")}.`);
+        const stat = `Bilanz: ${n} ${n === 1 ? "Karte" : "Karten"} bewegt${b.done ? `, ${b.done} erledigt` : ""}${b.comments ? `, ${b.comments} ${b.comments === 1 ? "Notiz" : "Notizen"}` : ""}. ${pick(BILANZ)}`;
+        people[p] = { head, text: sents.join(" "), chips: topCust, stat };
       }
-      yday = { label: new Intl.DateTimeFormat("de-DE", { timeZone: TZ, weekday: "long", day: "numeric", month: "long" }).format(d), people };
+      const fazit = teamCards ? `Gemeinsam ${teamCards} ${teamCards === 1 ? "Karte" : "Karten"} bewegt${teamDone ? ` und ${teamDone} erledigt` : ""}. Die Redaktion ist beeindruckt und gönnt sich einen Keks.` : "Ein ruhiger Tag auf dem Board. Auch Ruhetage gehören zum Erfolg.";
+      yday = { label: new Intl.DateTimeFormat("de-DE", { timeZone: TZ, weekday: "long", day: "numeric", month: "long" }).format(d), people, fazit };
     } catch (e) { yday = false; }
     if (cards) render();
   }
   function ydayHtml() {
     if (yday === false || yday === null) return "";
-    return `<div class="yday"><div class="yday-h"><h3>Was gestern <em>los war.</em></h3><span>${esc(yday.label)} · frei nach Trello, nicht ganz ernst gemeint</span></div><ul>${PEOPLE.map((p) => `<li><b>${p}</b><p>${esc(yday.people[p])}</p></li>`).join("")}</ul></div>`;
+    return `<div class="yday"><div class="yday-h"><h3>Was gestern <em>los war.</em></h3><span>Tagesblick-Kurier · ${esc(yday.label)} · frei nach Trello, nicht ganz ernst gemeint</span></div><ul>${PEOPLE.map((p) => { const x = yday.people[p]; return `<li><b>${p}</b><div><h4>${esc(x.head)}</h4><p>${esc(x.text)}</p>${x.stat || x.chips.length ? `<div class="ystat">${x.chips.map((c) => `<span class="ychip">${esc(c)}</span>`).join("")}${x.stat ? `<span>${esc(x.stat)}</span>` : ""}</div>` : ""}</div></li>`; }).join("")}</ul><div class="yfazit"><b>Team-Fazit</b><span>${esc(yday.fazit)}</span></div></div>`;
   }
+
 
 
   // ---------- Fortschritt heute ----------
