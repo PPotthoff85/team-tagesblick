@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Team-Tagesblick</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: Kopf mit Datum + Reiter je Person; links die Tagesliste der gewählten Person, rechts Team-Überblick und Logbuch-Feed */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --ink:#18202e; --muted:#5d6779; --line:#dde2ea;
+  --accent:#2453c7; --accent-soft:#e6ecfb;
+  --late:#c2341d; --late-soft:#fbe9e5; --today:#a35f00; --today-soft:#fbf0dd; --ok:#1e7a4c; --ok-soft:#e2f3ea;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11151d; --surface:#1a202b; --ink:#e8ecf3; --muted:#9aa4b6; --line:#2b3342;
+  --accent:#7d9cf5; --accent-soft:#1f2a45;
+  --late:#f08a76; --late-soft:#3a1e1a; --today:#f0b55c; --today-soft:#372a15; --ok:#6fcf9b; --ok-soft:#173225; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11151d; --surface:#1a202b; --ink:#e8ecf3; --muted:#9aa4b6; --line:#2b3342;
+  --accent:#7d9cf5; --accent-soft:#1f2a45;
+  --late:#f08a76; --late-soft:#3a1e1a; --today:#f0b55c; --today-soft:#372a15; --ok:#6fcf9b; --ok-soft:#173225; color-scheme:dark}
+*{box-sizing:border-box}
+html{color-scheme:light}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);padding-inline:16px;padding-block:20px 40px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+h1{font:700 clamp(26px,4vw,36px)/1.1 var(--f-display);margin:0;letter-spacing:-.01em;text-wrap:balance}
+.date{color:var(--muted);margin-top:4px}
+.status{font:500 12px var(--f-mono);color:var(--muted);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+button{font:inherit;cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 12px;font-size:13px}
+.btn:hover{border-color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{border:0;background:none;color:var(--muted);padding:10px 16px;font-weight:600;font-size:15px;border-bottom:3px solid transparent;margin-bottom:-1px;white-space:nowrap;display:flex;gap:8px;align-items:center}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab .n{font:500 12px var(--f-mono);background:var(--late-soft);color:var(--late);border-radius:99px;padding:1px 7px}
+.tab .n[data-zero]{background:var(--accent-soft);color:var(--muted)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.col{display:grid;gap:22px;min-width:0}
+section h2{font:600 13px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 8px;display:flex;gap:8px;align-items:baseline}
+section h2 .c{font-family:var(--f-mono);letter-spacing:0}
+.top{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+.top h2{color:var(--accent)}
+.top ol{margin:0;padding-left:22px;display:grid;gap:10px}
+.top li{padding-left:4px}
+.list{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.card{background:var(--surface);padding:10px 14px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:baseline}
+.card a{color:var(--ink);text-decoration:none;font-weight:500;min-width:0;overflow-wrap:anywhere}
+.card a:hover{color:var(--accent);text-decoration:underline}
+.meta{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 10px;font-size:12.5px;color:var(--muted)}
+.chip{font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
+.due{font:500 12.5px var(--f-mono);white-space:nowrap;padding:1px 8px;border-radius:6px;color:var(--muted)}
+.due.late{background:var(--late-soft);color:var(--late)}
+.due.today{background:var(--today-soft);color:var(--today)}
+.due.soon{background:var(--ok-soft);color:var(--ok)}
+details summary{cursor:pointer;color:var(--muted);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.empty{color:var(--muted);font-size:14px;padding:10px 0}
+.side{display:grid;gap:22px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.team{display:grid;gap:10px}
+.trow{display:grid;grid-template-columns:72px repeat(4,1fr);gap:6px;align-items:center;font-size:13px}
+.trow.h{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+.trow b{font-weight:600}
+.num{font:500 14px var(--f-mono);text-align:center;border-radius:6px;padding:2px 0}
+.num.late{background:var(--late-soft);color:var(--late)}
+.num.today{background:var(--today-soft);color:var(--today)}
+.feed{display:grid;gap:12px;margin:0;padding:0;list-style:none}
+.feed li{font-size:13.5px;border-left:2px solid var(--line);padding-left:10px}
+.feed .who{font-size:12px;color:var(--muted)}
+.feed a{color:var(--accent);text-decoration:none;font-weight:600}
+.feed p{margin:2px 0 0;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.notice{border:1px solid var(--today);background:var(--today-soft);color:var(--ink);border-radius:10px;padding:12px 14px;font-size:14px}
+.notice[data-kind="error"]{border-color:var(--late);background:var(--late-soft)}
+.skeleton{height:52px;background:var(--surface);border-radius:8px;opacity:.6}
+@media (prefers-reduced-motion:no-preference){.card{transition:background .15s}.card:hover{background:var(--accent-soft)}}
+</style>
+<style>
+.login{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px;max-width:560px;display:grid;gap:12px}
+.login h2{font:600 20px var(--f-display);margin:0;text-transform:none;letter-spacing:0;color:var(--ink)}
+.login p{margin:0;color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;padding:10px 16px;font-size:15px;justify-self:start}
+.logout{background:none;border:0;color:var(--muted);text-decoration:underline;font-size:12px;padding:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Team-Tagesblick</h1>
+      <div class="date" id="date"></div>
+    </div>
+    <div class="status"><span id="fresh">Lade Trello …</span><button class="btn" id="reload" type="button">Aktualisieren</button><button class="logout" id="logout" type="button" hidden>Abmelden</button></div>
+  </header>
+
+  <div id="notice" hidden></div>
+
+  <nav class="tabs" role="tablist" aria-label="Person wählen" id="tabs"></nav>
+
+  <div class="grid">
+    <main class="col" id="main">
+      <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+    </main>
+    <aside class="side">
+      <div class="panel">
+        <section>
+          <h2>Wer hat was</h2>
+          <div class="team" id="team"><div class="empty">Wird geladen …</div></div>
+        </section>
+      </div>
+      <div class="panel">
+        <section>
+          <h2>Zuletzt im Kunden-Logbuch</h2>
+          <ul class="feed" id="feed"><li class="empty">Wird geladen …</li></ul>
+        </section>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(() => {
+  // Trello API-Key (öffentlich, kein Geheimnis): https://trello.com/power-ups/admin → Power-Up → API-Schlüssel
+  const TRELLO_KEY = "c88c5be508ded6c9bb919e989ed54767";
+  const TEAM_BOARD = "k3fIItIx";
+  const KUNDEN_BOARD = "iXxM8zrq";
+  const PEOPLE = ["Patrick", "Kirsten", "Jan"];
+  const TZ = "Europe/Berlin";
+  const API = "https://api.trello.com/1";
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const dayKey = (d) => new Intl.DateTimeFormat("en-CA", {timeZone: TZ, year:"numeric", month:"2-digit", day:"2-digit"}).format(d);
+  const fmtDay = (d) => new Intl.DateTimeFormat("de-DE", {timeZone: TZ, weekday:"short", day:"2-digit", month:"2-digit"}).format(d);
+  const fmtTime = (ms) => new Intl.DateTimeFormat("de-DE", {timeZone: TZ, hour:"2-digit", minute:"2-digit"}).format(new Date(ms));
+  const store = { get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch(e){} }, del(k){ try { localStorage.removeItem(k); } catch(e){} } };
+
+  let state = { cards: null, feed: null, tab: store.get("tagesblick-tab"), me: null, storedAt: null };
+  $("date").textContent = new Intl.DateTimeFormat("de-DE", {timeZone: TZ, weekday:"long", day:"numeric", month:"long", year:"numeric"}).format(new Date());
+
+  // Token aus der Rückleitung von Trello übernehmen (#token=...)
+  const m = location.hash.match(/token=([0-9a-zA-Z]+)/);
+  if (m) { store.set("trello-token", m[1]); history.replaceState(null, "", location.pathname + location.search); }
+  let token = store.get("trello-token");
+
+  // ---------- Daten aufbereiten ----------
+  function personsOf(card) {
+    const set = new Set();
+    for (const m of card.members || []) {
+      const first = String(m.fullName || "").split(" ")[0];
+      if (PEOPLE.includes(first)) set.add(first);
+    }
+    if (!set.size) {
+      const tail = String(card.name || "").split("—").pop();
+      for (const p of PEOPLE) if (tail.includes(p)) set.add(p);
+    }
+    return [...set];
+  }
+  function bucketOfList(name) {
+    const n = String(name || "").toLowerCase();
+    if (n.includes("erledigt")) return "done";
+    if (n.includes("später")) return "later";
+    if (n.includes("wartet")) return "waiting";
+    if (n.includes("review") || n.includes("rückmeldung")) return "review";
+    return "work";
+  }
+  function customerOf(card) {
+    const lbl = (card.labels || []).find((l) => l.name);
+    if (lbl) return lbl.name;
+    const parts = String(card.name || "").split(" · ");
+    return parts.length > 1 ? parts[0] : "";
+  }
+  function titleOf(card) {
+    let t = String(card.name || "");
+    const parts = t.split(" · ");
+    if (parts.length > 1) t = parts.slice(1).join(" · ");
+    return t.replace(/\s+—\s+[^—]*$/, "");
+  }
+  function dueInfo(card) {
+    if (!card.due || card.dueComplete) return null;
+    const d = new Date(card.due);
+    const today = dayKey(new Date());
+    const k = dayKey(d);
+    const in7 = dayKey(new Date(Date.now() + 7 * 864e5));
+    let cls = "";
+    let label = fmtDay(d);
+    if (k < today) { cls = "late"; label = "überfällig · " + label; }
+    else if (k === today) { cls = "today"; label = "heute"; }
+    else if (k <= in7) { cls = "soon"; }
+    return { d, k, cls, label };
+  }
+  function prepare(nodes) {
+    return nodes
+      .filter((c) => !c.closed && !String(c.name || "").startsWith("ℹ️"))
+      .map((c) => ({ raw: c, persons: personsOf(c), bucket: bucketOfList(c.list && c.list.name), due: dueInfo(c), customer: customerOf(c), title: titleOf(c), url: c.webUrl || c.url, list: c.list ? c.list.name : "" }));
+  }
+
+  // ---------- Rendern ----------
+  function cardHtml(c, opts = {}) {
+    const others = c.persons.filter((p) => p !== opts.person);
+    const dueHtml = c.due ? `<span class="due ${c.due.cls}">${esc(c.due.label)}</span>` : `<span class="due">ohne Termin</span>`;
+    return `<div class="card">
+      <a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.title)}</a>${dueHtml}
+      <div class="meta">${c.customer ? `<span class="chip">${esc(c.customer)}</span>` : ""}${others.length ? `<span>mit ${esc(others.join(", "))}</span>` : ""}${opts.showList ? `<span>${esc(c.list.replace(/^[^\p{L}]+/u, ""))}</span>` : ""}</div>
+    </div>`;
+  }
+  function section(title, items, opts = {}) {
+    if (!items.length && !opts.alwaysShow) return "";
+    return `<section><h2>${esc(title)} <span class="c">${items.length}</span></h2>${items.length ? `<div class="list">${items.map((c) => cardHtml(c, opts)).join("")}</div>` : `<div class="empty">${esc(opts.emptyText || "Nichts offen.")}</div>`}</section>`;
+  }
+  const byDue = (a, b) => (a.due ? a.due.d : Infinity) - (b.due ? b.due.d : Infinity);
+
+  function countsFor(person, cards) {
+    const mine = cards.filter((c) => c.persons.includes(person) && c.bucket !== "done" && c.bucket !== "later");
+    return {
+      late: mine.filter((c) => c.due && c.due.cls === "late").length,
+      today: mine.filter((c) => c.due && c.due.cls === "today").length,
+      waiting: mine.filter((c) => c.bucket === "waiting").length,
+      open: mine.length,
+    };
+  }
+
+  function renderTabs() {
+    const cards = state.cards || [];
+    $("tabs").innerHTML = PEOPLE.map((p) => {
+      const n = state.cards ? countsFor(p, cards) : null;
+      const urgent = n ? n.late + n.today : 0;
+      return `<button class="tab" role="tab" type="button" id="tab-${p}" aria-selected="${p === state.tab}" data-p="${p}">${p}${n ? `<span class="n" ${urgent ? "" : "data-zero"} title="überfällig oder heute fällig">${urgent}</span>` : ""}</button>`;
+    }).join("");
+    $("tabs").querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => {
+      state.tab = b.dataset.p;
+      store.set("tagesblick-tab", state.tab);
+      renderAll();
+    }));
+  }
+
+  function renderMain() {
+    if (!state.cards) return;
+    const p = state.tab;
+    const mine = state.cards.filter((c) => c.persons.includes(p));
+    const active = mine.filter((c) => c.bucket !== "done" && c.bucket !== "later");
+    const dated = active.filter((c) => c.bucket !== "waiting");
+    const late = dated.filter((c) => c.due && c.due.cls === "late").sort(byDue);
+    const today = dated.filter((c) => c.due && c.due.cls === "today");
+    const soon = dated.filter((c) => c.due && c.due.cls === "soon").sort(byDue);
+    const later = active.filter((c) => c.due && c.due.cls === "" && c.bucket !== "waiting").sort(byDue);
+    const waiting = active.filter((c) => c.bucket === "waiting").sort(byDue);
+    const noDue = active.filter((c) => !c.due && c.bucket === "work");
+    const parked = mine.filter((c) => c.bucket === "later");
+    const review = state.cards.filter((c) => c.bucket === "review");
+    const unassigned = state.cards.filter((c) => !c.persons.length && c.bucket !== "done");
+
+    const top = [...late, ...today, ...soon].slice(0, 3);
+    const topHtml = `<div class="top"><section><h2>Heute am wichtigsten</h2>${top.length
+      ? `<ol>${top.map((c) => `<li><a href="${esc(c.url)}" target="_blank" rel="noopener" style="color:var(--ink);font-weight:600;text-decoration:none">${esc(c.customer ? c.customer + " · " : "")}${esc(c.title)}</a> <span class="due ${c.due.cls}">${esc(c.due.label)}</span></li>`).join("")}</ol>`
+      : `<div class="empty">Nichts überfällig und nichts in den nächsten 7 Tagen fällig. Zeit für die Karten ohne Termin.</div>`}</section></div>`;
+
+    let html = topHtml;
+    html += section("Überfällig", late, { person: p });
+    html += section("Heute fällig", today, { person: p });
+    html += section("Nächste 7 Tage", soon, { person: p });
+    if (p === "Patrick") {
+      html += section("Zur Rückmeldung / Review", review, { person: p, showList: false });
+      html += section("Noch niemandem zugeteilt", unassigned, { person: p, showList: true });
+    }
+    html += section("Wartet auf Kunde", waiting, { person: p });
+    html += section("Später fällig", later, { person: p });
+    if (noDue.length) html += `<details><summary>In Arbeit ohne Termin (${noDue.length})</summary><div class="list">${noDue.map((c) => cardHtml(c, { person: p })).join("")}</div></details>`;
+    if (parked.length) html += `<details><summary>Geparkt in „Später“ (${parked.length})</summary><div class="list">${parked.map((c) => cardHtml(c, { person: p })).join("")}</div></details>`;
+    if (!active.length && !parked.length) html += `<div class="empty">Für ${esc(p)} liegen keine offenen Karten im Board „Team – Aufgaben“.</div>`;
+    $("main").innerHTML = html;
+  }
+
+  function renderTeam() {
+    if (!state.cards) return;
+    const rows = PEOPLE.map((p) => {
+      const n = countsFor(p, state.cards);
+      return `<div class="trow"><b>${p}</b><span class="num ${n.late ? "late" : ""}">${n.late}</span><span class="num ${n.today ? "today" : ""}">${n.today}</span><span class="num">${n.waiting}</span><span class="num">${n.open}</span></div>`;
+    }).join("");
+    $("team").innerHTML = `<div class="trow h"><span></span><span style="text-align:center">überfällig</span><span style="text-align:center">heute</span><span style="text-align:center">wartet</span><span style="text-align:center">offen</span></div>${rows}`;
+  }
+
+  function renderFeed() {
+    if (!state.feed) return;
+    if (!state.feed.length) { $("feed").innerHTML = `<li class="empty">Noch keine Logbuch-Einträge.</li>`; return; }
+    $("feed").innerHTML = state.feed.slice(0, 12).map((a) => {
+      const d = new Date(a.date);
+      const text = String(a.commentText || "").replace(/\*\*/g, "").replace(/^📓\s*/, "");
+      return `<li><div class="who">${esc(fmtDay(d))} · ${esc((a.creator && a.creator.fullName || "").split(" ")[0])}</div><a href="${esc(a.card && a.card.url)}" target="_blank" rel="noopener">${esc(a.card && a.card.name)}</a><p>${esc(text)}</p></li>`;
+    }).join("");
+  }
+
+  function renderAll() {
+    if (!state.tab || !PEOPLE.includes(state.tab)) state.tab = state.me || "Patrick";
+    renderTabs(); renderMain(); renderTeam(); renderFeed();
+    if (state.storedAt) $("fresh").textContent = "Stand " + fmtTime(state.storedAt) + " Uhr";
+  }
+
+  function showNotice(kind, html) { const n = $("notice"); n.className = "notice"; n.dataset.kind = kind; n.innerHTML = html; n.hidden = false; }
+  function clearNotice() { $("notice").hidden = true; }
+
+
+
+  // ---------- Trello laden (direkt über die Trello-API, mit dem persönlichen Token) ----------
+  async function api(path, params = {}) {
+    const q = new URLSearchParams({ ...params, key: TRELLO_KEY, token });
+    const r = await fetch(`${API}${path}?${q}`);
+    if (r.status === 401) { const e = new Error("unauthorized"); e.code = 401; throw e; }
+    if (!r.ok) { const e = new Error("HTTP " + r.status); e.code = r.status; throw e; }
+    return r.json();
+  }
+
+  function showLogin(msg) {
+    $("logout").hidden = true;
+    $("fresh").textContent = "";
+    $("tabs").innerHTML = "";
+    $("team").innerHTML = ""; $("feed").innerHTML = "";
+    const configured = TRELLO_KEY && !TRELLO_KEY.startsWith("HIER_");
+    $("main").innerHTML = `<div class="login">
+      <h2>Mit Trello anmelden</h2>
+      <p>${esc(msg || "Die Seite liest die Boards „Team – Aufgaben“ und „Kunden – Stand & Logbuch“ mit deinem eigenen Trello-Zugang. Du siehst nur, was du in Trello auch siehst. Die Anmeldung bleibt in diesem Browser gespeichert.")}</p>
+      ${configured ? `<button class="btn primary" id="login" type="button">Mit Trello verbinden</button>` : `<p><b>Einrichtung fehlt:</b> In der Datei index.html ist noch kein Trello-API-Schlüssel eingetragen.</p>`}
+    </div>`;
+    const b = $("login");
+    if (b) b.addEventListener("click", () => {
+      const ret = location.origin + location.pathname;
+      const q = new URLSearchParams({ expiration: "never", name: "Team-Tagesblick", scope: "read", response_type: "token", key: TRELLO_KEY, return_url: ret, callback_method: "fragment" });
+      location.href = "https://trello.com/1/authorize?" + q;
+    });
+  }
+
+  async function load() {
+    $("fresh").textContent = "Lade Trello …";
+    try {
+      const [lists, cards] = await Promise.all([
+        api(`/boards/${TEAM_BOARD}/lists`, { fields: "name" }),
+        api(`/boards/${TEAM_BOARD}/cards`, { fields: "name,due,dueComplete,idList,closed,labels,shortUrl", members: "true", member_fields: "fullName" }),
+      ]);
+      const listName = Object.fromEntries(lists.map((l) => [l.id, l.name]));
+      const nodes = cards.map((c) => ({ ...c, webUrl: c.shortUrl, list: { name: listName[c.idList] || "" } }));
+      state.cards = prepare(nodes);
+      state.storedAt = Date.now();
+      clearNotice(); $("logout").hidden = false;
+      renderAll();
+    } catch (e) {
+      if (e.code === 401) { store.del("trello-token"); token = null; showLogin("Deine Trello-Anmeldung ist abgelaufen oder wurde widerrufen. Bitte neu verbinden."); return; }
+      showNotice("error", "Trello konnte nicht geladen werden (" + esc(e.message) + "). Prüfe deine Internetverbindung und drücke „Aktualisieren“.");
+      $("fresh").textContent = "";
+      return;
+    }
+    api(`/boards/${KUNDEN_BOARD}/actions`, { filter: "commentCard", limit: "30", memberCreator_fields: "fullName" })
+      .then((acts) => { state.feed = acts.map((a) => ({ date: a.date, creator: a.memberCreator, commentText: a.data && a.data.text, card: { name: a.data && a.data.card && a.data.card.name, url: "https://trello.com/c/" + (a.data && a.data.card && a.data.card.shortLink) } })); renderFeed(); })
+      .catch(() => { $("feed").innerHTML = `<li class="empty">Logbuch gerade nicht lesbar.</li>`; });
+  }
+
+  async function boot() {
+    if (!token) { showLogin(); return; }
+    try {
+      const me = await api("/members/me", { fields: "fullName" });
+      const first = String(me.fullName || "").split(" ")[0];
+      if (PEOPLE.includes(first)) { state.me = first; if (!state.tab) state.tab = first; }
+    } catch (e) {
+      if (e.code === 401) { store.del("trello-token"); token = null; showLogin("Deine Trello-Anmeldung ist abgelaufen. Bitte neu verbinden."); return; }
+    }
+    await load();
+  }
+
+  $("reload").addEventListener("click", () => { if (token) load(); });
+  $("logout").addEventListener("click", () => { store.del("trello-token"); token = null; state.cards = null; showLogin(); });
+  setInterval(() => { if (token && document.visibilityState === "visible") load(); }, 5 * 60 * 1000);
+  document.addEventListener("visibilitychange", () => { if (token && document.visibilityState === "visible" && state.storedAt && Date.now() - state.storedAt > 5 * 60 * 1000) load(); });
+  boot();
+})();
+</script>
+</body>
+</html>
