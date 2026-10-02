@@ -410,7 +410,7 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
     [/mail|antwort|rückfrage|entwurf/i, ["schrieb Mails, manche davon sogar mit Absenden-Klick", "beantwortete Rückfragen, die Rückfragen erzeugten"]],
   ];
   const FALLBACK = ["arbeitete still und gründlich, wie ein Ninja mit Trello-Zugang", "erledigte Dinge, über die man nicht spricht, weil sie einfach funktionieren"];
-  const QUIET = ["war in Trello verdächtig ruhig. Entweder Urlaub, Deep Work oder ein sehr langer Kaffee.", "hinterließ gestern keine Spuren auf dem Board. Ein Phantom.", "hat Trello gestern geschont. Das Board bedankt sich."];
+  const QUIET = ["arbeitete gestern abseits des Boards. Deep Work, Kundengespräche oder einfach verdiente Pause.", "hat Trello gestern geschont. Das Board bedankt sich und ist ausgeruht.", "war gestern im Hintergrund unterwegs. Die besten Dinge passieren oft offline."];
   async function loadYesterday() {
     try {
       const d = prevWorkday(), start = new Date(d); start.setHours(0, 0, 0, 0); const end = new Date(start); end.setDate(end.getDate() + 1);
@@ -438,9 +438,9 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
         const hits = TOPICS.filter(([re]) => re.test(b.text)).map(([, l]) => l);
         const line = hits.length ? pick(pick(hits)) : pick(FALLBACK);
         let out = `${topCust.length ? `${topCust.join(" und ")}: ` : ""}${p} ${line}.`;
-        if (b.done >= 3) out += ` Nebenbei ${b.done} Karten erledigt, Angeber.`;
+        if (b.done >= 3) out += ` Nebenbei ${b.done} Karten erledigt. Respekt.`;
         else if (b.done) out += ` Und hat ${b.done === 1 ? "eine Karte" : b.done + " Karten"} nach „Erledigt“ getragen.`;
-        else if (b.n >= 10) out += ` ${b.n} Aktionen auf dem Board, aber nichts erledigt. Klassischer Marathon ohne Ziellinie.`;
+
         people[p] = out;
       }
       yday = { label: new Intl.DateTimeFormat("de-DE", { timeZone: TZ, weekday: "long", day: "numeric", month: "long" }).format(d), people };
@@ -453,9 +453,11 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
   }
 
 
-  // ---------- Fortschritt heute: Punkte für alles, was vorangebracht wurde ----------
-  const LEVELS = [[0, "Startklar"], [10, "Warmgelaufen"], [25, "Im Flow"], [45, "Durchstarter"], [70, "Maschine"], [100, "Legende"]];
-  let progress = {}; // {Name: {points, done, cards:{id:{name,url,kinds:Set,pts}}}}
+  // ---------- Fortschritt heute ----------
+  // Fair gerechnet: Punkte bekommt, wem die Karte gehört (Mitglieder der Karte), egal wer sie in Trello bewegt.
+  // Kommentare zählen nicht, damit Review und Abstimmung niemanden aufblähen. Kein Personen-Ranking, nur ein gemeinsamer Team-Wert.
+  const LEVELS = [[0, "Startklar"], [5, "Warmgelaufen"], [15, "Im Flow"], [30, "Durchstarter"], [50, "Maschine"], [80, "Legende"]];
+  let progress = {}, teamProg = { points: 0, done: 0, cards: 0 };
   function levelOf(pts) {
     let i = 0; LEVELS.forEach(([min], k) => { if (pts >= min) i = k; });
     const [min, name] = LEVELS[i], next = LEVELS[i + 1];
@@ -463,28 +465,34 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
   }
   async function loadProgress() {
     const start = new Date(); start.setHours(0, 0, 0, 0);
-    const acts = await api(`/boards/${BOARD}/actions`, { filter: "commentCard,updateCard,createCard", since: start.toISOString(), limit: "500", memberCreator_fields: "fullName" });
-    const res = Object.fromEntries(PEOPLE.map((p) => [p, { points: 0, done: 0, cards: {} }]));
+    const acts = await api(`/boards/${BOARD}/actions`, { filter: "updateCard,createCard", since: start.toISOString(), limit: "1000" });
+    const perCard = {}; // id -> {name,url,kinds,pts,owners}
     for (const a of acts) {
-      const who = String((a.memberCreator && a.memberCreator.fullName) || "").split(" ")[0];
-      if (!res[who]) continue;
       const d = a.data || {}, card = d.card || {};
       if (!card.id) continue;
-      if (a.type === "commentCard" && String(d.text || "").startsWith("🤖")) continue;
       let kind = null, pts = 0;
-      if (a.type === "commentCard") { kind = "kommentiert"; pts = 2; }
-      else if (a.type === "createCard") { kind = "neu angelegt"; pts = 2; }
-      else if (d.listAfter) { if (/erledigt/i.test(d.listAfter.name || "")) { kind = "erledigt"; pts = 10; } else { kind = "verschoben"; pts = 3; } }
-      else if (d.old && "dueComplete" in d.old && d.card && d.card.dueComplete) { kind = "erledigt"; pts = 10; }
+      if (a.type === "createCard") { kind = "neu angelegt"; pts = 2; }
+      else if (d.listAfter) {
+        const to = String(d.listAfter.name || "").toLowerCase();
+        if (to.includes("erledigt")) { kind = "erledigt"; pts = 10; }
+        else if (to.includes("später")) { kind = "geparkt"; pts = 1; }
+        else { kind = "weitergebracht"; pts = 3; }
+      }
+      else if (d.old && "dueComplete" in d.old && card.dueComplete) { kind = "erledigt"; pts = 10; }
       else if (d.old && "closed" in d.old) { kind = "aufgeräumt"; pts = 3; }
       else if (d.old && "due" in d.old) { kind = "Termin gesetzt"; pts = 2; }
-      else { kind = "bearbeitet"; pts = 1; }
-      const r = res[who];
-      const c = r.cards[card.id] || (r.cards[card.id] = { name: card.name || "", url: "https://trello.com/c/" + (card.shortLink || ""), kinds: new Set(), pts: 0 });
+      else continue; // Namen, Beschreibungen usw. zählen nicht
+      const c = perCard[card.id] || (perCard[card.id] = { name: card.name || "", url: "https://trello.com/c/" + (card.shortLink || ""), kinds: new Set(), pts: 0 });
       c.kinds.add(kind);
-      const add = Math.min(pts, 15 - c.pts); // je Karte höchstens 15 Punkte am Tag
-      if (add > 0) { c.pts += add; r.points += add; }
-      if (kind === "erledigt" && !c.counted) { c.counted = true; r.done++; }
+      c.pts = Math.min(10, Math.max(c.pts, pts) + (c.kinds.size > 1 ? 1 : 0)); // höchstens 10 Punkte pro Karte und Tag
+    }
+    const res = Object.fromEntries(PEOPLE.map((p) => [p, { points: 0, done: 0, cards: {} }]));
+    teamProg = { points: 0, done: 0, cards: 0 };
+    for (const [id, c] of Object.entries(perCard)) {
+      const owners = byId[id] ? byId[id].persons : PEOPLE.filter((p) => String(c.name).split("—").pop().includes(p));
+      const isDone = c.kinds.has("erledigt");
+      teamProg.points += c.pts; teamProg.cards++; if (isDone) teamProg.done++;
+      for (const p of owners) { const r = res[p]; r.cards[id] = c; r.points += c.pts; if (isDone) r.done++; }
     }
     progress = res;
   }
@@ -492,8 +500,8 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
     const r = progress[p];
     if (!r) return "";
     const items = Object.values(r.cards).sort((a, b) => b.pts - a.pts);
-    const head = `<section><h2>Heute <em>vorangebracht.</em></h2><p class="lead">Alles, was ${esc(p)} heute in Trello bewegt hat. Jede erledigte Karte bringt 10 Punkte, Verschieben 3, Kommentare, neue Karten und Termine je 2.</p>`;
-    if (!items.length) return head + `<p class="empty">Der Tag ist noch jung. Jede Karte, die heute bewegt wird, landet hier und bringt Punkte.</p></section>`;
+    const head = `<section><h2>Heute <em>vorangebracht.</em></h2><p class="lead">Karten von ${esc(p)}, die heute ein Stück weitergekommen sind, egal wer sie in Trello bewegt hat. Erledigt bringt 10 Punkte, weitergebracht oder aufgeräumt 3, neuer Termin oder neue Karte 2.</p>`;
+    if (!items.length) return head + `<p class="empty">Der Tag ist noch jung. Jede eigene Karte, die heute weiterkommt, landet hier und bringt Punkte.</p></section>`;
     return head + `<ul class="prog">${items.map((c) => { const parts = String(c.name).split(" · "); const cust = parts.length > 1 ? parts[0] : ""; const title = (parts.length > 1 ? parts.slice(1).join(" · ") : c.name).replace(/\s+—\s+[^—]*$/, ""); return `<li><a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(title)}</a><span class="pts">+${c.pts}</span><div class="meta">${cust ? `<span class="chip">${esc(cust)}</span>` : ""}${[...c.kinds].map((k) => `<span class="kind ${k === "erledigt" ? "done" : ""}">${k === "erledigt" ? "✓ erledigt" : esc(k)}</span>`).join("")}</div></li>`; }).join("")}</ul></section>`;
   }
 
@@ -534,7 +542,7 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
     const frac = lv.next ? (pr.points - lv.min) / (lv.next - lv.min) : 1;
     $("greet").innerHTML = (won || lv.i >= 3) ? `Starker Tag, <em>${esc(person)}.</em>` : `${greeting()}, <em>${esc(person)}.</em>`;
     $("score").hidden = false;
-    $("score").innerHTML = `<div class="score">${ring(pr.points, frac)}<div><span class="lvl">Stufe ${lv.i + 1} · ${esc(lv.name)}</span><b>${moved ? `${moved} ${moved === 1 ? "Karte" : "Karten"} vorangebracht${pr.done ? `, ${pr.done} erledigt` : ""}` : "Bereit für den ersten Schritt"}</b><div class="sub">${lv.next ? `Nächste Stufe „${esc(lv.nextName)}“ ab ${lv.next} Punkten` : "Höchste Stufe erreicht"}${s.streak ? ` · 🔥 ${s.streak} ${s.streak === 1 ? "Arbeitstag" : "Arbeitstage"} in Folge` : ""}</div><div class="week" title="Punkte heute">${PEOPLE.map((p) => `<span class="${p === person ? "me" : ""}">${p} ${(progress[p] || {}).points || 0}</span>`).join("")}</div></div></div>`;
+    $("score").innerHTML = `<div class="score">${ring(pr.points, frac)}<div><span class="lvl">Stufe ${lv.i + 1} · ${esc(lv.name)}</span><b>${moved ? `${moved} ${moved === 1 ? "eigene Karte" : "eigene Karten"} weitergebracht${pr.done ? `, ${pr.done} erledigt` : ""}` : "Bereit für den ersten Schritt"}</b><div class="sub">${lv.next ? `Nächste Stufe „${esc(lv.nextName)}“ ab ${lv.next} Punkten` : "Höchste Stufe erreicht"}${s.streak ? ` · 🔥 ${s.streak} ${s.streak === 1 ? "Arbeitstag" : "Arbeitstage"} in Folge` : ""}</div><div class="week" title="Gemeinsamer Stand aller drei"><span class="me">Team heute: ${teamProg.done} erledigt · ${teamProg.points} Punkte</span>${(() => { const tl = levelOf(Math.round(teamProg.points / 3)); return `<span>Team-Stufe: ${esc(tl.name)}</span>`; })()}</div></div></div>`;
     levelUp(person, lv.i);
 
     // Heute
