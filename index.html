@@ -4,99 +4,157 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Team-Tagesblick</title>
+<title>Team-Tagesblick · PPotthoff</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400&family=Schibsted+Grotesk:wght@400;500;600&display=swap">
 <style>
-/* Layout: eine schmale Spalte – Name, Datum, bis zu 5 Punkte. Nichts sonst. */
+/* Stil von ppotthoff.io: Creme-Grund, Tannengrün für Kopf und Hero, Messing als Akzent,
+   Newsreader (leicht, kursive Akzente) für Überschriften, Schibsted Grotesk für Text.
+   Aufbau: grüner Kopf mit Personenwahl → „Heute“ (Top 5, Tagesziel) → Gesamtüberblick (alle Karten, Team, Logbuch). */
 :root{
-  --bg:#f3f5f8; --surface:#fff; --ink:#18202e; --muted:#5d6779; --line:#dde2ea; --accent:#2453c7; --accent-soft:#e6ecfb;
-  --late:#c2341d; --late-soft:#fbe9e5; --today:#a35f00; --today-soft:#fbf0dd; --soon:#1e7a4c; --soon-soft:#e2f3ea;
-  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif; --f-body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --cream:#f5f0e6; --cream-2:#ede6d6; --paper:#fbf8f2; --green:#22372d; --green-2:#2c4538;
+  --text:#211f1a; --soft:#5a564c; --faint:#8a8576; --brass:#b0894c; --brass-2:#c9a46a; --line:#211f1a24;
+  --late:#a8432c; --late-bg:#f4e2da; --today:#8a5d12; --today-bg:#f3e7cc; --soon:#2f6b4a; --soon-bg:#dfeadf;
+  --f-serif:"Newsreader", Georgia, "Times New Roman", serif;
+  --f-sans:"Schibsted Grotesk", "Segoe UI", system-ui, sans-serif;
   color-scheme:light;
 }
-@media (prefers-color-scheme:dark){:root{
-  --bg:#11151d; --surface:#1a202b; --ink:#e8ecf3; --muted:#9aa4b6; --line:#2b3342; --accent:#7d9cf5; --accent-soft:#1f2a45;
-  --late:#f08a76; --late-soft:#3a1e1a; --today:#f0b55c; --today-soft:#372a15; --soon:#6fcf9b; --soon-soft:#173225; color-scheme:dark}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 var(--f-body);padding-inline:16px;padding-block:24px 48px}
-.wrap{max-width:640px;margin:0 auto;display:grid;gap:20px}
-nav{display:flex;gap:6px;flex-wrap:wrap}
-nav button{font:600 15px var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:99px;padding:6px 16px;cursor:pointer}
-nav button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-h1{font:700 clamp(30px,7vw,40px)/1.05 var(--f-display);margin:0;letter-spacing:-.01em}
-.date{color:var(--muted);margin-top:4px}
-ol{list-style:none;margin:0;padding:0;display:grid;gap:10px;counter-reset:n}
-li{counter-increment:n;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px 14px 52px;position:relative}
-li::before{content:counter(n);position:absolute;left:16px;top:14px;font:700 20px/1.2 var(--f-display);color:var(--accent)}
-li a{color:var(--ink);text-decoration:none;font-weight:600;font-size:17px;overflow-wrap:anywhere}
-li a:hover{text-decoration:underline}
-.meta{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:6px;font-size:13px;color:var(--muted);align-items:center}
-.chip{font-weight:600;padding:1px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
-.due{font:500 13px var(--f-mono);padding:1px 8px;border-radius:6px}
-.late{background:var(--late-soft);color:var(--late)} .today{background:var(--today-soft);color:var(--today)} .soon{background:var(--soon-soft);color:var(--soon)} .none{color:var(--muted)}
-.empty,.note{color:var(--muted)}
-.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;display:grid;gap:12px}
-.btn{font:600 15px var(--f-body);background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 16px;cursor:pointer;justify-self:start}
-footer{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
-footer button{background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit}
+body{margin:0;background:var(--cream);color:var(--text);font:16px/1.5 var(--f-sans)}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--brass);outline-offset:3px}
+.inner{max-width:1080px;margin:0 auto;padding-inline:20px}
 
-.score{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
-.ring{width:64px;height:64px}
-.ring circle{fill:none;stroke-width:7}
-.ring .bg{stroke:var(--line)} .ring .fg{stroke:var(--accent);stroke-linecap:round;transition:stroke-dashoffset .6s ease}
-.ring.full .fg{stroke:var(--soon)}
-.ring text{font:700 17px var(--f-display);fill:var(--ink);text-anchor:middle;dominant-baseline:central}
-.stats{display:grid;gap:4px;min-width:0}
-.stats b{font-size:16px}
-.stats .sub{font-size:13px;color:var(--muted)}
-.streak{font-weight:600}
-.team{display:flex;gap:6px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
-.team span{background:var(--bg);border-radius:99px;padding:1px 9px}
-.team .me{background:var(--accent-soft);color:var(--accent);font-weight:600}
-li.done{opacity:.55}
-li.done a{text-decoration:line-through}
-li.done::before{content:"✓";color:var(--soon)}
-.win{margin-bottom:12px;background:var(--soon-soft);border:1px solid var(--soon);border-radius:14px;padding:16px;display:grid;gap:4px}
-.win strong{font:700 20px var(--f-display);color:var(--soon)}
+/* Kopf */
+.top{background:var(--green);color:var(--cream)}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-block:18px 0}
+.brand{font:400 24px/1 var(--f-serif);letter-spacing:-.01em}
+.brand b{font-weight:400;color:var(--brass)}
+.brand small{display:block;font:500 11px/1.6 var(--f-sans);letter-spacing:.14em;text-transform:uppercase;color:#f5f0e6a6;margin-top:6px}
+nav{display:flex;gap:6px;flex-wrap:wrap}
+nav button{font:600 14px var(--f-sans);border:1px solid #f5f0e640;background:transparent;color:var(--cream);border-radius:99px;padding:7px 16px;cursor:pointer}
+nav button:hover{border-color:var(--brass)}
+nav button[aria-pressed="true"]{background:var(--brass);border-color:var(--brass);color:var(--green)}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:28px;align-items:end;padding-block:44px 40px}
+@media (max-width:760px){.hero{grid-template-columns:minmax(0,1fr)}}
+.eyebrow{font:500 13px var(--f-sans);color:var(--brass);letter-spacing:.02em}
+h1{font:300 clamp(38px,6.5vw,64px)/1.04 var(--f-serif);margin:10px 0 0;letter-spacing:-.015em;text-wrap:balance}
+h1 em{font-style:italic;color:var(--brass)}
+.score{display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px;align-items:center;background:var(--green-2);border:1px solid #f5f0e61f;border-radius:16px;padding:16px 20px;min-width:min(100%,360px)}
+.ring{width:76px;height:76px}
+.ring circle{fill:none;stroke-width:6}
+.ring .bg{stroke:#f5f0e626}.ring .fg{stroke:var(--brass);stroke-linecap:round;transition:stroke-dashoffset .8s ease}
+.ring text{font:400 22px var(--f-serif);fill:var(--cream);text-anchor:middle;dominant-baseline:central}
+.score b{font:400 20px/1.2 var(--f-serif);display:block}
+.score .sub{font-size:13px;color:#f5f0e6bf;margin-top:4px}
+.week{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;font-size:12px}
+.week span{border:1px solid #f5f0e633;border-radius:99px;padding:1px 9px;color:#f5f0e6cc}
+.week .me{border-color:var(--brass);color:var(--brass-2);font-weight:600}
+
+/* Inhalt */
+main{padding-block:40px 64px;display:grid;gap:56px}
+h2{font:300 clamp(28px,4vw,38px)/1.1 var(--f-serif);margin:0 0 6px;letter-spacing:-.01em}
+h2 em{font-style:italic;color:var(--brass)}
+.lead{color:var(--soft);margin:0 0 20px;max-width:62ch}
+.today-list{list-style:none;margin:0;padding:0;display:grid;gap:12px;counter-reset:n}
+.today-list li{counter-increment:n;display:grid;grid-template-columns:44px minmax(0,1fr);gap:6px 14px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px 18px;align-items:baseline}
+.today-list li::before{content:counter(n);font:300 34px/1 var(--f-serif);color:var(--brass);grid-row:span 2}
+.today-list li.done::before{content:"✓";color:var(--soon)}
+.today-list li.done{background:transparent}
+.today-list li.done a{text-decoration:line-through;color:var(--faint)}
+.t-title{font:400 21px/1.25 var(--f-serif);text-decoration:none;overflow-wrap:anywhere}
+.t-title:hover{color:var(--green-2);text-decoration:underline;text-decoration-color:var(--brass)}
+.meta{display:flex;flex-wrap:wrap;gap:6px 10px;font-size:13px;color:var(--soft);align-items:center}
+.chip{font-weight:600;font-size:12px;letter-spacing:.02em;padding:2px 9px;border-radius:99px;background:var(--cream-2);color:var(--green)}
+.due{font-size:12.5px;font-weight:600;padding:2px 9px;border-radius:6px;background:var(--cream-2);color:var(--soft);white-space:nowrap}
+.due.late{background:var(--late-bg);color:var(--late)} .due.today{background:var(--today-bg);color:var(--today)} .due.soon{background:var(--soon-bg);color:var(--soon)} .due.done{background:var(--soon-bg);color:var(--soon)}
+.win{background:var(--green);color:var(--cream);border-radius:16px;padding:22px 24px;margin-bottom:14px;display:grid;gap:4px}
+.win strong{font:300 30px/1.15 var(--f-serif)} .win strong em{color:var(--brass);font-style:italic}
+.win span{color:#f5f0e6cc}
+.bonus{margin:22px 0 10px;font:italic 300 20px var(--f-serif);color:var(--soft)}
+
+.overview{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:32px;align-items:start}
+@media (max-width:900px){.overview{grid-template-columns:minmax(0,1fr)}}
+.col{display:grid;gap:26px;min-width:0}
+.grp h3{font:600 12px var(--f-sans);text-transform:uppercase;letter-spacing:.12em;color:var(--soft);margin:0 0 10px;display:flex;gap:8px;align-items:baseline}
+.grp h3 .c{color:var(--brass)}
+.rows{border-top:1px solid var(--line)}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;padding:12px 2px;border-bottom:1px solid var(--line);align-items:baseline}
+.row a{text-decoration:none;font-weight:500;overflow-wrap:anywhere}
+.row a:hover{text-decoration:underline;text-decoration-color:var(--brass)}
+.row .meta{grid-column:1/-1}
+details summary{cursor:pointer;font:600 12px var(--f-sans);text-transform:uppercase;letter-spacing:.12em;color:var(--soft);margin-bottom:10px}
+details summary:hover{color:var(--green)}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:18px 20px}
+.panel h3{font:400 22px var(--f-serif);margin:0 0 12px}
+.tbl{display:grid;gap:8px}
+.tr{display:grid;grid-template-columns:70px repeat(4,1fr);gap:6px;align-items:center;font-size:14px}
+.tr.h{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint)}
+.tr.h span{text-align:center}
+.num{text-align:center;font:400 18px var(--f-serif);border-radius:6px;padding:1px 0}
+.num.late{background:var(--late-bg);color:var(--late)} .num.today{background:var(--today-bg);color:var(--today)}
+.feed{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.feed li{border-left:2px solid var(--brass);padding-left:12px;font-size:14px}
+.feed .who{font-size:12px;color:var(--faint)}
+.feed a{font-weight:600;text-decoration:none;color:var(--green)}
+.feed p{margin:2px 0 0;color:var(--soft);overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.empty{color:var(--soft)}
+.login{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:26px;max-width:560px;display:grid;gap:14px}
+.btn{font:600 15px var(--f-sans);background:var(--brass);color:var(--green);border:0;border-radius:99px;padding:12px 22px;cursor:pointer;justify-self:start}
+.btn:hover{background:var(--brass-2)}
+footer{border-top:1px solid var(--line);padding-block:18px 32px;display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--faint)}
+footer button{background:none;border:0;padding:0;color:var(--soft);text-decoration:underline;cursor:pointer;font:inherit}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:10}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <nav id="nav" aria-label="Person"></nav>
-  <header><h1 id="who">Heute</h1><div class="date" id="date"></div></header>
-  <section id="score" hidden></section>
-  <main id="main"><div class="note">Lade …</div></main>
-  <footer id="foot" hidden><span id="fresh"></span><button type="button" id="reload">Aktualisieren</button><a id="board" href="https://trello.com/b/k3fIItIx/team-aufgaben" target="_blank" rel="noopener" style="color:inherit">Board öffnen</a><button type="button" id="logout">Abmelden</button></footer>
+<div class="top">
+  <div class="inner">
+    <div class="bar">
+      <div class="brand">P<b>P</b>otthoff<small>Team-Tagesblick</small></div>
+      <nav id="nav" aria-label="Person"></nav>
+    </div>
+    <div class="hero">
+      <div><div class="eyebrow" id="date"></div><h1 id="greet">Guten Tag.</h1></div>
+      <div id="score" hidden></div>
+    </div>
+  </div>
+</div>
+
+<div class="inner">
+  <main id="main"><p class="empty">Lade …</p></main>
+  <footer id="foot" hidden><span id="fresh"></span><button type="button" id="reload">Aktualisieren</button><a href="https://trello.com/b/k3fIItIx/team-aufgaben" target="_blank" rel="noopener">Board öffnen</a><button type="button" id="logout">Abmelden</button></footer>
 </div>
 <canvas id="confetti" hidden></canvas>
+
 <script>
 (() => {
   const TRELLO_KEY = "c88c5be508ded6c9bb919e989ed54767"; // öffentlicher API-Schlüssel (Power-Up „Team Tagesblick“)
-  const BOARD = "k3fIItIx";
+  const BOARD = "k3fIItIx", KUNDEN = "iXxM8zrq";
   const PEOPLE = ["Patrick", "Kirsten", "Jan"];
-  const TZ = "Europe/Berlin";
-  const MAX = 5;
+  const TZ = "Europe/Berlin", MAX = 5;
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const store = { get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}}, del(k){try{localStorage.removeItem(k)}catch(e){}} };
   const dayKey = (d) => new Intl.DateTimeFormat("en-CA",{timeZone:TZ,year:"numeric",month:"2-digit",day:"2-digit"}).format(d);
   const fmtDay = (d) => new Intl.DateTimeFormat("de-DE",{timeZone:TZ,weekday:"short",day:"2-digit",month:"2-digit"}).format(d);
-  $("date").textContent = new Intl.DateTimeFormat("de-DE",{timeZone:TZ,weekday:"long",day:"numeric",month:"long"}).format(new Date());
+  const today = () => dayKey(new Date());
+  $("date").textContent = new Intl.DateTimeFormat("de-DE",{timeZone:TZ,weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(new Date());
 
   const hm = location.hash.match(/token=([0-9a-zA-Z]+)/);
   if (hm) { store.set("trello-token", hm[1]); history.replaceState(null, "", location.pathname); }
   let token = store.get("trello-token");
   let person = store.get("tagesblick-tab");
-  let cards = null, byId = {};
+  let cards = null, byId = {}, stats = {}, feed = null;
 
+  // ---------- Karten aufbereiten ----------
   function bucket(list) {
     const n = (list || "").toLowerCase();
     if (n.includes("erledigt")) return "done";
     if (n.includes("später")) return "later";
     if (n.includes("wartet")) return "waiting";
+    if (n.includes("review") || n.includes("rückmeldung")) return "review";
     return "work";
   }
   function personsOf(c) {
@@ -106,20 +164,21 @@ li.done::before{content:"✓";color:var(--soon)}
   }
   function due(c) {
     if (!c.due || c.dueComplete) return null;
-    const d = new Date(c.due), k = dayKey(d), t = dayKey(new Date()), w = dayKey(new Date(Date.now() + 7 * 864e5));
+    const d = new Date(c.due), k = dayKey(d), t = today(), w = dayKey(new Date(Date.now() + 7 * 864e5));
     if (k < t) return { d, cls: "late", label: "überfällig · " + fmtDay(d), rank: 0 };
     if (k === t) return { d, cls: "today", label: "heute", rank: 1 };
     if (k <= w) return { d, cls: "soon", label: fmtDay(d), rank: 2 };
-    return { d, cls: "none", label: fmtDay(d), rank: 3 };
+    return { d, cls: "", label: fmtDay(d), rank: 3 };
   }
   function parse(c, listName) {
     const parts = String(c.name).split(" · ");
     const customer = (c.labels && c.labels[0] && c.labels[0].name) || (parts.length > 1 ? parts[0] : "");
     const title = (parts.length > 1 ? parts.slice(1).join(" · ") : c.name).replace(/\s+—\s+[^—]*$/, "");
-    return { id: c.id, title, customer, url: c.shortUrl, persons: personsOf(c), bucket: bucket(listName), due: due(c), activity: new Date(c.dateLastActivity || 0) };
+    return { id: c.id, title, customer, url: c.shortUrl, list: listName || "", persons: personsOf(c), bucket: bucket(listName), due: due(c), dueComplete: !!c.dueComplete, activity: new Date(c.dateLastActivity || 0) };
   }
+  const byDue = (a, b) => (a.due ? a.due.d : Infinity) - (b.due ? b.due.d : Infinity);
 
-  // Top 5: zuerst überfällig, heute, nächste 7 Tage (nach Datum); aufgefüllt mit „In Arbeit“ ohne nahe Frist, zuletzt bearbeitete zuerst.
+  // Top 5: überfällig, heute, nächste 7 Tage; aufgefüllt mit „In Arbeit“ (Karten mit späterem Termin zuerst, dann zuletzt bearbeitete).
   function top(p) {
     const mine = cards.filter((c) => c.persons.includes(p) && c.bucket === "work");
     const urgent = mine.filter((c) => c.due && c.due.rank <= 2).sort((a, b) => a.due.rank - b.due.rank || a.due.d - b.due.d);
@@ -127,117 +186,144 @@ li.done::before{content:"✓";color:var(--soon)}
     return [...urgent, ...rest].slice(0, MAX);
   }
 
-  function renderNav() {
-    $("nav").innerHTML = PEOPLE.map((p) => `<button type="button" aria-pressed="${p === person}" data-p="${p}">${p}</button>`).join("");
-    $("nav").querySelectorAll("button").forEach((b) => b.onclick = () => { person = b.dataset.p; store.set("tagesblick-tab", person); render(); });
-  }
-  // ---------- Tagesziel & Belohnung ----------
-  // Tagesziel = die Top-5-Liste beim ersten Öffnen des Tages (je Person, in diesem Browser).
-  // Geschafft = Karte liegt in „Erledigt“, ist als erledigt markiert oder archiviert.
-  const today = () => dayKey(new Date());
+  // ---------- Tagesziel ----------
   function goalFor(p) {
     const k = `ziel-${p}-${today()}`;
     let ids = null; try { ids = JSON.parse(store.get(k) || "null"); } catch (e) {}
     if (!ids) { ids = top(p).map((c) => c.id); if (ids.length) store.set(k, JSON.stringify(ids)); }
     return ids;
   }
-  function isDone(id) { const c = byId[id]; return !c || c.bucket === "done" || c.dueComplete; }
+  const isDone = (id) => { const c = byId[id]; return !c || c.bucket === "done" || c.dueComplete; };
 
   function ring(done, total) {
-    const r = 26, C = 2 * Math.PI * r, frac = total ? done / total : 0;
-    return `<svg class="ring ${total && done === total ? "full" : ""}" viewBox="0 0 64 64" role="img" aria-label="${done} von ${total} geschafft"><circle class="bg" cx="32" cy="32" r="${r}"/><circle class="fg" cx="32" cy="32" r="${r}" transform="rotate(-90 32 32)" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}"/><text x="32" y="32">${done}/${total}</text></svg>`;
+    const r = 32, C = 2 * Math.PI * r, frac = total ? done / total : 0;
+    return `<svg class="ring" viewBox="0 0 76 76" role="img" aria-label="${done} von ${total} geschafft"><circle class="bg" cx="38" cy="38" r="${r}"/><circle class="fg" cx="38" cy="38" r="${r}" transform="rotate(-90 38 38)" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}"/><text x="38" y="38">${done}/${total}</text></svg>`;
+  }
+  function greeting() { const h = parseInt(new Intl.DateTimeFormat("en-GB",{timeZone:TZ,hour:"2-digit",hourCycle:"h23"}).format(new Date()), 10); return h < 11 ? "Guten Morgen" : h < 17 ? "Hallo" : "Guten Abend"; }
+
+  // ---------- Rendern ----------
+  function renderNav() {
+    $("nav").innerHTML = PEOPLE.map((p) => `<button type="button" aria-pressed="${p === person}" data-p="${p}">${p}</button>`).join("");
+    $("nav").querySelectorAll("button").forEach((b) => b.onclick = () => { person = b.dataset.p; store.set("tagesblick-tab", person); render(); });
+  }
+
+  function todayItem(c, closed) {
+    const others = (c.persons || []).filter((x) => x !== person);
+    return `<li class="${closed ? "done" : ""}"><a class="t-title" href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.title)}</a><div class="meta">${c.customer ? `<span class="chip">${esc(c.customer)}</span>` : ""}${closed ? `<span class="due done">erledigt</span>` : `<span class="due ${c.due ? c.due.cls : ""}">${esc(c.due ? c.due.label : "ohne Termin")}</span>`}${others.length ? `<span>mit ${esc(others.join(", "))}</span>` : ""}</div></li>`;
+  }
+  function row(c, showList) {
+    const others = c.persons.filter((x) => x !== person);
+    return `<div class="row"><a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.title)}</a><span class="due ${c.due ? c.due.cls : ""}">${esc(c.due ? c.due.label : "ohne Termin")}</span><div class="meta">${c.customer ? `<span class="chip">${esc(c.customer)}</span>` : ""}${others.length ? `<span>mit ${esc(others.join(", "))}</span>` : ""}${showList ? `<span>${esc(c.list.replace(/^[^\p{L}]+/u, ""))}</span>` : ""}</div></div>`;
+  }
+  function grp(title, items, showList) {
+    if (!items.length) return "";
+    return `<section class="grp"><h3>${esc(title)} <span class="c">${items.length}</span></h3><div class="rows">${items.map((c) => row(c, showList)).join("")}</div></section>`;
+  }
+  function counts(p) {
+    const mine = cards.filter((c) => c.persons.includes(p) && c.bucket !== "done" && c.bucket !== "later");
+    return { late: mine.filter((c) => c.due && c.due.cls === "late").length, today: mine.filter((c) => c.due && c.due.cls === "today").length, waiting: mine.filter((c) => c.bucket === "waiting").length, open: mine.length };
   }
 
   function render() {
     renderNav();
-    $("who").textContent = person ? `${person}, heute wichtig` : "Heute";
     if (!cards || !person) return;
     const ids = goalFor(person);
-    const goal = ids.map((id) => byId[id] ? byId[id] : { id, title: "Karte archiviert", customer: "", url: "#", persons: [], due: null, gone: true });
-    const done = ids.filter(isDone).length, total = ids.length;
+    const goal = ids.map((id) => byId[id] || { id, title: "Karte archiviert", customer: "", url: "#", persons: [], due: null });
+    const done = ids.filter(isDone).length, total = ids.length, won = total > 0 && done === total;
     const s = stats[person] || { today: 0, week: 0, streak: 0 };
-    const week = PEOPLE.map((p) => `<span class="${p === person ? "me" : ""}">${p} ${(stats[p] || {}).week || 0}</span>`).join("");
-    $("score").hidden = false;
-    $("score").innerHTML = `<div class="score">${ring(done, total)}<div class="stats"><b>${total ? (done === total ? "Tagesziel geschafft" : `Noch ${total - done} bis zum Tagesziel`) : "Heute kein Tagesziel"}</b><span class="sub"><span class="streak">${s.streak ? `🔥 ${s.streak} ${s.streak === 1 ? "Arbeitstag" : "Arbeitstage"} in Folge` : "Noch keine Serie – heute eine Karte erledigen startet sie"}</span> · heute ${s.today} erledigt</span><div class="team" title="Diese Woche nach „Erledigt“ verschobene Karten">Woche: ${week}</div></div></div>`;
 
+    // Kopf
+    $("greet").innerHTML = won ? `Geschafft, <em>${esc(person)}.</em>` : `${greeting()}, <em>${esc(person)}.</em>`;
+    $("score").hidden = false;
+    $("score").innerHTML = `<div class="score">${ring(done, total)}<div><b>${total ? (won ? "Tagesziel erreicht" : `Noch ${total - done} bis zum Tagesziel`) : "Heute ohne Tagesziel"}</b><div class="sub">${s.streak ? `🔥 ${s.streak} ${s.streak === 1 ? "Arbeitstag" : "Arbeitstage"} in Folge` : "Erledige heute eine Karte, um eine Serie zu starten"} · heute ${s.today} erledigt</div><div class="week" title="Diese Woche nach „Erledigt“ verschobene Karten">${PEOPLE.map((p) => `<span class="${p === person ? "me" : ""}">${p} ${(stats[p] || {}).week || 0}</span>`).join("")}</div></div></div>`;
+
+    // Heute
     const open = goal.filter((c) => !isDone(c.id)), closed = goal.filter((c) => isDone(c.id));
-    const li = (c, isClosed) => {
-      const others = (c.persons || []).filter((x) => x !== person);
-      return `<li class="${isClosed ? "done" : ""}"><a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.title)}</a><div class="meta">${c.customer ? `<span class="chip">${esc(c.customer)}</span>` : ""}${isClosed ? `<span class="due soon">erledigt</span>` : `<span class="due ${c.due ? c.due.cls : "none"}">${esc(c.due ? c.due.label : "ohne Termin")}</span>`}${others.length ? `<span>mit ${esc(others.join(", "))}</span>` : ""}</div></li>`;
+    let html = `<section><h2>Heute <em>wichtig.</em></h2><p class="lead">Die ${total || ""} Aufgaben, die heute zählen. Sobald eine Karte in Trello auf „Erledigt“ liegt, wird sie hier abgehakt.</p>`;
+    if (won) { html += `<div class="win"><strong>Stark, <em>${esc(person)}</em>. Alles für heute erledigt.</strong><span>${s.streak > 1 ? `Das ist dein ${s.streak}. Arbeitstag in Folge. ` : ""}Was jetzt noch kommt, ist Bonus.</span></div>`; celebrate(person); }
+    html += total ? `<ol class="today-list">${open.map((c) => todayItem(c, false)).join("")}${closed.map((c) => todayItem(c, true)).join("")}</ol>` : `<p class="empty">Nichts Offenes in „In Arbeit“. Schau im Board, ob etwas zugeteilt werden muss.</p>`;
+    if (won) { const next = top(person).filter((c) => !ids.includes(c.id)).slice(0, 3); if (next.length) html += `<p class="bonus">Bonus, falls noch Luft ist</p><ol class="today-list">${next.map((c) => todayItem(c, false)).join("")}</ol>`; }
+    html += `</section>`;
+
+    // Gesamtüberblick
+    const mine = cards.filter((c) => c.persons.includes(person));
+    const active = mine.filter((c) => c.bucket !== "done" && c.bucket !== "later");
+    const dated = active.filter((c) => c.bucket !== "waiting");
+    const g = {
+      late: dated.filter((c) => c.due && c.due.cls === "late").sort(byDue),
+      today: dated.filter((c) => c.due && c.due.cls === "today"),
+      soon: dated.filter((c) => c.due && c.due.cls === "soon").sort(byDue),
+      later: dated.filter((c) => c.due && c.due.cls === "").sort(byDue),
+      waiting: active.filter((c) => c.bucket === "waiting").sort(byDue),
+      noDue: active.filter((c) => !c.due && c.bucket !== "waiting"),
+      parked: mine.filter((c) => c.bucket === "later"),
     };
-    let html = "";
-    if (total && done === total) {
-      html += `<div class="win"><strong>Stark, ${esc(person)}! Alles für heute erledigt.</strong><span>${s.streak > 1 ? `Das ist dein ${s.streak}. Arbeitstag in Folge. ` : ""}Was jetzt noch kommt, ist Bonus.</span></div>`;
-      celebrate(person);
+    let left = grp("Überfällig", g.late) + grp("Heute fällig", g.today) + grp("Nächste 7 Tage", g.soon);
+    if (person === "Patrick") {
+      left += grp("Zur Rückmeldung / Review", cards.filter((c) => c.bucket === "review"));
+      left += grp("Noch niemandem zugeteilt", cards.filter((c) => !c.persons.length && c.bucket !== "done"), true);
     }
-    html += total ? `<ol>${open.map((c) => li(c, false)).join("")}${closed.map((c) => li(c, true)).join("")}</ol>` : `<p class="empty">Nichts Offenes in „In Arbeit“. Schau ins Board, ob etwas zugeteilt werden muss.</p>`;
-    if (total && done === total) {
-      const next = top(person).filter((c) => !ids.includes(c.id)).slice(0, 3);
-      if (next.length) html += `<p class="note" style="margin:18px 0 6px">Bonus, falls noch Luft ist:</p><ol>${next.map((c) => li(c, false)).join("")}</ol>`;
-    }
+    left += grp("Wartet auf Kunde", g.waiting) + grp("Später fällig", g.later);
+    if (g.noDue.length) left += `<details><summary>In Arbeit ohne Termin (${g.noDue.length})</summary><div class="rows">${g.noDue.map((c) => row(c)).join("")}</div></details>`;
+    if (g.parked.length) left += `<details><summary>Geparkt in „Später“ (${g.parked.length})</summary><div class="rows">${g.parked.map((c) => row(c)).join("")}</div></details>`;
+    if (!left) left = `<p class="empty">Keine offenen Karten für ${esc(person)}.</p>`;
+
+    const team = `<div class="tbl"><div class="tr h"><span></span><span>überfällig</span><span>heute</span><span>wartet</span><span>offen</span></div>${PEOPLE.map((p) => { const n = counts(p); return `<div class="tr"><b>${p}</b><span class="num ${n.late ? "late" : ""}">${n.late}</span><span class="num ${n.today ? "today" : ""}">${n.today}</span><span class="num">${n.waiting}</span><span class="num">${n.open}</span></div>`; }).join("")}</div>`;
+    const fd = feed === null ? `<p class="empty">Wird geladen …</p>` : feed.length ? `<ul class="feed">${feed.slice(0, 10).map((a) => `<li><div class="who">${esc(fmtDay(new Date(a.date)))} · ${esc(a.who)}</div><a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.card)}</a><p>${esc(a.text)}</p></li>`).join("")}</ul>` : `<p class="empty">Noch keine Logbuch-Einträge.</p>`;
+
+    html += `<section><h2>Gesamt<em>überblick.</em></h2><p class="lead">Alle offenen Karten von ${esc(person)}, dazu der Stand im Team und das Kunden-Logbuch.</p><div class="overview"><div class="col">${left}</div><aside class="col"><div class="panel"><h3>Wer hat was</h3>${team}</div><div class="panel"><h3>Kunden-Logbuch</h3>${fd}</div></aside></div></section>`;
     $("main").innerHTML = html;
   }
 
-  // Konfetti einmal pro Person und Tag (nicht bei reduzierter Bewegung)
+  // Konfetti einmal pro Person und Tag
   function celebrate(p) {
     const k = `gefeiert-${p}-${today()}`;
     if (store.get(k)) return; store.set(k, "1");
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const cv = $("confetti"), ctx = cv.getContext("2d"); cv.hidden = false;
     cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; ctx.scale(devicePixelRatio, devicePixelRatio);
-    const cols = ["#2453c7", "#1e7a4c", "#f0b55c", "#c2341d", "#7d9cf5"];
-    const parts = Array.from({ length: 140 }, () => ({ x: innerWidth / 2, y: innerHeight * 0.35, vx: (Math.random() - 0.5) * 12, vy: -Math.random() * 11 - 3, s: 4 + Math.random() * 5, c: cols[Math.floor(Math.random() * cols.length)], r: Math.random() * 6 }));
+    const cols = ["#b0894c", "#c9a46a", "#22372d", "#2f6b4a", "#ede6d6"];
+    const parts = Array.from({ length: 150 }, () => ({ x: innerWidth / 2, y: innerHeight * 0.3, vx: (Math.random() - 0.5) * 13, vy: -Math.random() * 11 - 3, s: 5 + Math.random() * 5, c: cols[Math.floor(Math.random() * cols.length)], r: Math.random() * 6 }));
     let t = 0;
     (function frame() {
       ctx.clearRect(0, 0, innerWidth, innerHeight);
       parts.forEach((q) => { q.vy += 0.28; q.x += q.vx; q.y += q.vy; q.r += 0.1; ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.r); ctx.fillStyle = q.c; ctx.fillRect(-q.s / 2, -q.s / 4, q.s, q.s / 2); ctx.restore(); });
-      if (++t < 160) requestAnimationFrame(frame); else { ctx.clearRect(0, 0, innerWidth, innerHeight); cv.hidden = true; }
+      if (++t < 170) requestAnimationFrame(frame); else { ctx.clearRect(0, 0, innerWidth, innerHeight); cv.hidden = true; }
     })();
   }
 
-  // ---------- Statistik aus Trello: wer hat wann Karten nach „Erledigt“ gebracht ----------
-  let stats = {};
-  async function loadStats(listNames) {
-    const since = new Date(Date.now() - 21 * 864e5).toISOString();
-    const acts = await api(`/boards/${BOARD}/actions`, { filter: "updateCard:idList", since, limit: "1000", fields: "data,date", memberCreator: "false" });
-    const doneDays = Object.fromEntries(PEOPLE.map((p) => [p, new Set()]));
-    const counts = Object.fromEntries(PEOPLE.map((p) => [p, { today: 0, week: 0 }]));
-    const seen = new Set();
-    const now = new Date(), t = today();
-    const monday = new Date(now); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-    for (const a of acts) {
-      const after = a.data && a.data.listAfter && a.data.listAfter.name || "";
-      if (!after.toLowerCase().includes("erledigt")) continue;
-      const cid = a.data.card && a.data.card.id; if (!cid || seen.has(cid)) continue; seen.add(cid);
-      const c = byId[cid];
-      const who = c ? c.persons : PEOPLE.filter((p) => String(a.data.card.name || "").split("—").pop().includes(p));
-      const d = new Date(a.date), k = dayKey(d);
-      for (const p of who) { doneDays[p].add(k); if (k === t) counts[p].today++; if (d >= monday) counts[p].week++; }
-    }
-    // Serie: aufeinanderfolgende Arbeitstage (Mo–Fr) mit mindestens einer erledigten Karte. Heute zählt mit, bricht die Serie aber noch nicht.
-    for (const p of PEOPLE) {
-      let streak = 0; const d = new Date();
-      if (!doneDays[p].has(dayKey(d))) d.setDate(d.getDate() - 1);
-      for (let i = 0; i < 21; i++) {
-        const wd = d.getDay();
-        if (wd !== 0 && wd !== 6) { if (doneDays[p].has(dayKey(d))) streak++; else break; }
-        d.setDate(d.getDate() - 1);
-      }
-      stats[p] = { ...counts[p], streak };
-    }
-  }
-
+  // ---------- Trello ----------
   async function api(path, params) {
     const r = await fetch(`https://api.trello.com/1${path}?` + new URLSearchParams({ ...params, key: TRELLO_KEY, token }));
     if (r.status === 401) { const e = new Error("401"); e.code = 401; throw e; }
     if (!r.ok) throw new Error("HTTP " + r.status);
     return r.json();
   }
-  function login(msg) {
-    $("foot").hidden = true; $("nav").innerHTML = ""; $("who").textContent = "Team-Tagesblick";
-    $("main").innerHTML = `<div class="box"><div>${esc(msg || "Einmal mit Trello verbinden, dann siehst du hier jeden Tag deine wichtigsten Aufgaben. Die Anmeldung bleibt in diesem Browser gespeichert.")}</div><button class="btn" id="login" type="button">Mit Trello verbinden</button></div>`;
-    $("login").onclick = () => { location.href = "https://trello.com/1/authorize?" + new URLSearchParams({ expiration: "never", name: "Team-Tagesblick", scope: "read", response_type: "token", key: TRELLO_KEY, return_url: location.origin + location.pathname, callback_method: "fragment" }); };
+
+  // Wer hat wann Karten nach „Erledigt“ gebracht: Serie (Arbeitstage in Folge), heute, diese Woche
+  async function loadStats() {
+    const since = new Date(Date.now() - 21 * 864e5).toISOString();
+    const acts = await api(`/boards/${BOARD}/actions`, { filter: "updateCard:idList", since, limit: "1000", fields: "data,date", memberCreator: "false" });
+    const days = Object.fromEntries(PEOPLE.map((p) => [p, new Set()]));
+    const cnt = Object.fromEntries(PEOPLE.map((p) => [p, { today: 0, week: 0 }]));
+    const seen = new Set(), t = today();
+    const monday = new Date(); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+    for (const a of acts) {
+      const after = (a.data && a.data.listAfter && a.data.listAfter.name) || "";
+      if (!after.toLowerCase().includes("erledigt")) continue;
+      const cid = a.data.card && a.data.card.id; if (!cid || seen.has(cid)) continue; seen.add(cid);
+      const who = byId[cid] ? byId[cid].persons : PEOPLE.filter((p) => String(a.data.card.name || "").split("—").pop().includes(p));
+      const d = new Date(a.date), k = dayKey(d);
+      for (const p of who) { days[p].add(k); if (k === t) cnt[p].today++; if (d >= monday) cnt[p].week++; }
+    }
+    for (const p of PEOPLE) {
+      let streak = 0; const d = new Date();
+      if (!days[p].has(dayKey(d))) d.setDate(d.getDate() - 1);
+      for (let i = 0; i < 21; i++) { const wd = d.getDay(); if (wd !== 0 && wd !== 6) { if (days[p].has(dayKey(d))) streak++; else break; } d.setDate(d.getDate() - 1); }
+      stats[p] = { ...cnt[p], streak };
+    }
   }
+
   async function load() {
     try {
       const [lists, raw] = await Promise.all([
@@ -245,24 +331,37 @@ li.done::before{content:"✓";color:var(--soon)}
         api(`/boards/${BOARD}/cards`, { fields: "name,due,dueComplete,idList,labels,shortUrl,dateLastActivity", members: "true", member_fields: "fullName" }),
       ]);
       const ln = Object.fromEntries(lists.map((l) => [l.id, l.name]));
-      cards = raw.filter((c) => !String(c.name).startsWith("ℹ️")).map((c) => ({ ...parse(c, ln[c.idList]), dueComplete: !!c.dueComplete }));
+      cards = raw.filter((c) => !String(c.name).startsWith("ℹ️")).map((c) => parse(c, ln[c.idList]));
       byId = Object.fromEntries(cards.map((c) => [c.id, c]));
       try { await loadStats(); } catch (e) { stats = {}; }
       $("foot").hidden = false;
       $("fresh").textContent = "Stand " + new Intl.DateTimeFormat("de-DE",{timeZone:TZ,hour:"2-digit",minute:"2-digit"}).format(new Date()) + " Uhr";
       render();
     } catch (e) {
-      if (e.code === 401) { store.del("trello-token"); token = null; login("Die Trello-Anmeldung ist abgelaufen. Bitte neu verbinden."); return; }
+      if (e.code === 401) { store.del("trello-token"); token = null; return login("Die Trello-Anmeldung ist abgelaufen. Bitte neu verbinden."); }
       $("main").innerHTML = `<p class="empty">Trello ist gerade nicht erreichbar (${esc(e.message)}). Bitte später „Aktualisieren“.</p>`;
+      return;
     }
+    api(`/boards/${KUNDEN}/actions`, { filter: "commentCard", limit: "20", memberCreator_fields: "fullName" })
+      .then((acts) => { feed = acts.map((a) => ({ date: a.date, who: String((a.memberCreator && a.memberCreator.fullName) || "").split(" ")[0], card: a.data && a.data.card && a.data.card.name, url: "https://trello.com/c/" + (a.data && a.data.card && a.data.card.shortLink), text: String((a.data && a.data.text) || "").replace(/\*\*/g, "").replace(/^📓\s*/, "") })); render(); })
+      .catch(() => { feed = []; render(); });
   }
+
+  function login(msg) {
+    $("foot").hidden = true; $("nav").innerHTML = ""; $("score").hidden = true;
+    $("greet").innerHTML = `Was heute <em>zählt.</em>`;
+    $("main").innerHTML = `<div class="login"><div>${esc(msg || "Einmal mit Trello verbinden, dann siehst du hier jeden Tag deine wichtigsten Aufgaben, dein Tagesziel und den Stand im Team. Die Anmeldung bleibt in diesem Browser gespeichert.")}</div><button class="btn" id="login" type="button">Mit Trello verbinden</button></div>`;
+    $("login").onclick = () => { location.href = "https://trello.com/1/authorize?" + new URLSearchParams({ expiration: "never", name: "Team-Tagesblick", scope: "read", response_type: "token", key: TRELLO_KEY, return_url: location.origin + location.pathname, callback_method: "fragment" }); };
+  }
+
   async function boot() {
     if (!token) return login();
     if (!person) {
-      try { const me = await api("/members/me", { fields: "fullName" }); const f = String(me.fullName || "").split(" ")[0]; if (PEOPLE.includes(f)) person = f; } catch (e) { if (e.code === 401) { store.del("trello-token"); token = null; return login(); } }
+      try { const me = await api("/members/me", { fields: "fullName" }); const f = String(me.fullName || "").split(" ")[0]; if (PEOPLE.includes(f)) person = f; }
+      catch (e) { if (e.code === 401) { store.del("trello-token"); token = null; return login(); } }
       person = person || "Patrick";
     }
-    render(); load();
+    renderNav(); load();
   }
   $("reload").onclick = () => token && load();
   $("logout").onclick = () => { store.del("trello-token"); token = null; cards = null; login(); };
