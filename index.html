@@ -11,7 +11,7 @@
 <style>
 /* Stil von ppotthoff.io: Creme-Grund, Tannengrün für Kopf und Hero, Messing als Akzent,
    Newsreader (leicht, kursive Akzente) für Überschriften, Schibsted Grotesk für Text.
-   Aufbau: grüner Kopf mit Personenwahl → „Heute“ (Top 5, Tagesziel) → Gesamtüberblick (alle Karten, Team, Logbuch). */
+   Aufbau: grüner Kopf mit Personenwahl und Tagespunkten → Fokus (Top 5) → Heute vorangebracht → Gesamtüberblick (alle Karten, Team, Logbuch). */
 :root{
   --cream:#f5f0e6; --cream-2:#ede6d6; --paper:#fbf8f2; --green:#22372d; --green-2:#2c4538;
   --text:#211f1a; --soft:#5a564c; --faint:#8a8576; --brass:#b0894c; --brass-2:#c9a46a; --line:#211f1a24;
@@ -108,6 +108,17 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
 
 
 
+
+/* Heute vorangebracht */
+.prog{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.prog li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:baseline;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.prog a{text-decoration:none;font-weight:500;overflow-wrap:anywhere}
+.prog a:hover{text-decoration:underline;text-decoration-color:var(--brass)}
+.prog .pts{font:400 18px var(--f-serif);color:var(--brass);white-space:nowrap}
+.prog .meta{grid-column:1/-1}
+.kind{font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px;background:var(--cream-2);color:var(--green)}
+.kind.done{background:var(--soon-bg);color:var(--soon)}
+.lvl{display:inline-block;font:600 11px var(--f-sans);letter-spacing:.1em;text-transform:uppercase;color:var(--brass-2);margin-bottom:2px}
 /* Gestern-Rubrik */
 .yday{background:var(--green);color:var(--cream);border-radius:16px;padding:18px 22px;display:grid;gap:10px}
 .yday-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
@@ -236,9 +247,15 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
   }
   const isDone = (id) => { const c = byId[id]; return !c || c.bucket === "done" || c.dueComplete; };
 
-  function ring(done, total) {
-    const r = 32, C = 2 * Math.PI * r, frac = total ? done / total : 0;
-    return `<svg class="ring" viewBox="0 0 76 76" role="img" aria-label="${done} von ${total} geschafft"><circle class="bg" cx="38" cy="38" r="${r}"/><circle class="fg" cx="38" cy="38" r="${r}" transform="rotate(-90 38 38)" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}"/><text x="38" y="38">${done}/${total}</text></svg>`;
+  function ring(points, frac) {
+    const r = 32, C = 2 * Math.PI * r, f = Math.max(0.04, Math.min(1, frac));
+    return `<svg class="ring" viewBox="0 0 76 76" role="img" aria-label="${points} Punkte heute"><circle class="bg" cx="38" cy="38" r="${r}"/><circle class="fg" cx="38" cy="38" r="${r}" transform="rotate(-90 38 38)" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - f)}"/><text x="38" y="34">${points}</text><text x="38" y="52" style="font:600 9px var(--f-sans);letter-spacing:.08em;fill:#f5f0e6a6">PUNKTE</text></svg>`;
+  }
+  // Konfetti beim Erreichen einer neuen Stufe (einmal pro Stufe und Tag)
+  function levelUp(p, i) {
+    const k = `stufe-${p}-${today()}`, prev = Number(store.get(k) || 0);
+    if (i > prev) { store.set(k, String(i)); if (prev > 0 || i >= 2) confetti(); }
+    else if (!store.get(k)) store.set(k, String(i));
   }
   function greeting() { const h = parseInt(new Intl.DateTimeFormat("en-GB",{timeZone:TZ,hour:"2-digit",hourCycle:"h23"}).format(new Date()), 10); return h < 11 ? "Guten Morgen" : h < 17 ? "Hallo" : "Guten Abend"; }
 
@@ -435,6 +452,51 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
     return `<div class="yday"><div class="yday-h"><h3>Was gestern <em>los war.</em></h3><span>${esc(yday.label)} · frei nach Trello, nicht ganz ernst gemeint</span></div><ul>${PEOPLE.map((p) => `<li><b>${p}</b><p>${esc(yday.people[p])}</p></li>`).join("")}</ul></div>`;
   }
 
+
+  // ---------- Fortschritt heute: Punkte für alles, was vorangebracht wurde ----------
+  const LEVELS = [[0, "Startklar"], [10, "Warmgelaufen"], [25, "Im Flow"], [45, "Durchstarter"], [70, "Maschine"], [100, "Legende"]];
+  let progress = {}; // {Name: {points, done, cards:{id:{name,url,kinds:Set,pts}}}}
+  function levelOf(pts) {
+    let i = 0; LEVELS.forEach(([min], k) => { if (pts >= min) i = k; });
+    const [min, name] = LEVELS[i], next = LEVELS[i + 1];
+    return { i, name, min, next: next ? next[0] : null, nextName: next ? next[1] : null };
+  }
+  async function loadProgress() {
+    const start = new Date(); start.setHours(0, 0, 0, 0);
+    const acts = await api(`/boards/${BOARD}/actions`, { filter: "commentCard,updateCard,createCard", since: start.toISOString(), limit: "500", memberCreator_fields: "fullName" });
+    const res = Object.fromEntries(PEOPLE.map((p) => [p, { points: 0, done: 0, cards: {} }]));
+    for (const a of acts) {
+      const who = String((a.memberCreator && a.memberCreator.fullName) || "").split(" ")[0];
+      if (!res[who]) continue;
+      const d = a.data || {}, card = d.card || {};
+      if (!card.id) continue;
+      if (a.type === "commentCard" && String(d.text || "").startsWith("🤖")) continue;
+      let kind = null, pts = 0;
+      if (a.type === "commentCard") { kind = "kommentiert"; pts = 2; }
+      else if (a.type === "createCard") { kind = "neu angelegt"; pts = 2; }
+      else if (d.listAfter) { if (/erledigt/i.test(d.listAfter.name || "")) { kind = "erledigt"; pts = 10; } else { kind = "verschoben"; pts = 3; } }
+      else if (d.old && "dueComplete" in d.old && d.card && d.card.dueComplete) { kind = "erledigt"; pts = 10; }
+      else if (d.old && "closed" in d.old) { kind = "aufgeräumt"; pts = 3; }
+      else if (d.old && "due" in d.old) { kind = "Termin gesetzt"; pts = 2; }
+      else { kind = "bearbeitet"; pts = 1; }
+      const r = res[who];
+      const c = r.cards[card.id] || (r.cards[card.id] = { name: card.name || "", url: "https://trello.com/c/" + (card.shortLink || ""), kinds: new Set(), pts: 0 });
+      c.kinds.add(kind);
+      const add = Math.min(pts, 15 - c.pts); // je Karte höchstens 15 Punkte am Tag
+      if (add > 0) { c.pts += add; r.points += add; }
+      if (kind === "erledigt" && !c.counted) { c.counted = true; r.done++; }
+    }
+    progress = res;
+  }
+  function progressList(p) {
+    const r = progress[p];
+    if (!r) return "";
+    const items = Object.values(r.cards).sort((a, b) => b.pts - a.pts);
+    const head = `<section><h2>Heute <em>vorangebracht.</em></h2><p class="lead">Alles, was ${esc(p)} heute in Trello bewegt hat. Jede erledigte Karte bringt 10 Punkte, Verschieben 3, Kommentare, neue Karten und Termine je 2.</p>`;
+    if (!items.length) return head + `<p class="empty">Der Tag ist noch jung. Jede Karte, die heute bewegt wird, landet hier und bringt Punkte.</p></section>`;
+    return head + `<ul class="prog">${items.map((c) => { const parts = String(c.name).split(" · "); const cust = parts.length > 1 ? parts[0] : ""; const title = (parts.length > 1 ? parts.slice(1).join(" · ") : c.name).replace(/\s+—\s+[^—]*$/, ""); return `<li><a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(title)}</a><span class="pts">+${c.pts}</span><div class="meta">${cust ? `<span class="chip">${esc(cust)}</span>` : ""}${[...c.kinds].map((k) => `<span class="kind ${k === "erledigt" ? "done" : ""}">${k === "erledigt" ? "✓ erledigt" : esc(k)}</span>`).join("")}</div></li>`; }).join("")}</ul></section>`;
+  }
+
   // ---------- Rendern ----------
   function renderNav() {
     $("nav").innerHTML = PEOPLE.map((p) => `<button type="button" aria-pressed="${p === person}" data-p="${p}">${p}</button>`).join("");
@@ -466,18 +528,22 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
     const done = ids.filter(isDone).length, total = ids.length, won = total > 0 && done === total;
     const s = stats[person] || { today: 0, week: 0, streak: 0 };
 
-    // Kopf
-    $("greet").innerHTML = won ? `Geschafft, <em>${esc(person)}.</em>` : `${greeting()}, <em>${esc(person)}.</em>`;
+    // Kopf: Fortschritt statt Rückstand
+    const pr = progress[person] || { points: 0, done: 0, cards: {} };
+    const lv = levelOf(pr.points), moved = Object.keys(pr.cards).length;
+    const frac = lv.next ? (pr.points - lv.min) / (lv.next - lv.min) : 1;
+    $("greet").innerHTML = (won || lv.i >= 3) ? `Starker Tag, <em>${esc(person)}.</em>` : `${greeting()}, <em>${esc(person)}.</em>`;
     $("score").hidden = false;
-    $("score").innerHTML = `<div class="score">${ring(done, total)}<div><b>${total ? (won ? "Tagesziel erreicht" : `Noch ${total - done} bis zum Tagesziel`) : "Heute ohne Tagesziel"}</b><div class="sub">${s.streak ? `🔥 ${s.streak} ${s.streak === 1 ? "Arbeitstag" : "Arbeitstage"} in Folge` : "Erledige heute eine Karte, um eine Serie zu starten"} · heute ${s.today} erledigt</div><div class="week" title="Diese Woche nach „Erledigt“ verschobene Karten">${PEOPLE.map((p) => `<span class="${p === person ? "me" : ""}">${p} ${(stats[p] || {}).week || 0}</span>`).join("")}</div></div></div>`;
+    $("score").innerHTML = `<div class="score">${ring(pr.points, frac)}<div><span class="lvl">Stufe ${lv.i + 1} · ${esc(lv.name)}</span><b>${moved ? `${moved} ${moved === 1 ? "Karte" : "Karten"} vorangebracht${pr.done ? `, ${pr.done} erledigt` : ""}` : "Bereit für den ersten Schritt"}</b><div class="sub">${lv.next ? `Nächste Stufe „${esc(lv.nextName)}“ ab ${lv.next} Punkten` : "Höchste Stufe erreicht"}${s.streak ? ` · 🔥 ${s.streak} ${s.streak === 1 ? "Arbeitstag" : "Arbeitstage"} in Folge` : ""}</div><div class="week" title="Punkte heute">${PEOPLE.map((p) => `<span class="${p === person ? "me" : ""}">${p} ${(progress[p] || {}).points || 0}</span>`).join("")}</div></div></div>`;
+    levelUp(person, lv.i);
 
     // Heute
     const open = goal.filter((c) => !isDone(c.id)), closed = goal.filter((c) => isDone(c.id));
-    let html = `<div style="display:grid;gap:14px">${cookieHtml(person)}${bikeHtml()}${padelHtml()}${ydayHtml()}</div>` + `<section><h2>Heute <em>wichtig.</em></h2><p class="lead">Die ${total || ""} Aufgaben, die heute zählen. Sobald eine Karte in Trello auf „Erledigt“ liegt, wird sie hier abgehakt.</p>`;
-    if (won) { html += `<div class="win"><strong>Stark, <em>${esc(person)}</em>. Alles für heute erledigt.</strong><span>${s.streak > 1 ? `Das ist dein ${s.streak}. Arbeitstag in Folge. ` : ""}Was jetzt noch kommt, ist Bonus.</span></div>`; celebrate(person); }
+    let html = `<div style="display:grid;gap:14px">${cookieHtml(person)}${bikeHtml()}${padelHtml()}${ydayHtml()}</div>` + `<section><h2>Fokus <em>für heute.</em></h2><p class="lead">Die Themen mit dem meisten Schwung für heute. Was in Trello auf „Erledigt“ landet, wird hier abgehakt und bringt 10 Punkte.</p>`;
+    if (won) { html += `<div class="win"><strong>Stark, <em>${esc(person)}</em>. Alle Fokus-Themen erledigt.</strong><span>${s.streak > 1 ? `Das ist dein ${s.streak}. Arbeitstag in Folge. ` : ""}Was jetzt noch kommt, ist Bonus.</span></div>`; celebrate(person); }
     html += total ? `<ol class="today-list">${open.map((c) => todayItem(c, false)).join("")}${closed.map((c) => todayItem(c, true)).join("")}</ol>` : `<p class="empty">Nichts Offenes in „In Arbeit“. Schau im Board, ob etwas zugeteilt werden muss.</p>`;
     if (won) { const next = top(person).filter((c) => !ids.includes(c.id)).slice(0, 3); if (next.length) html += `<p class="bonus">Bonus, falls noch Luft ist</p><ol class="today-list">${next.map((c) => todayItem(c, false)).join("")}</ol>`; }
-    html += `</section>`;
+    html += `</section>` + progressList(person);
 
     // Gesamtüberblick
     const mine = cards.filter((c) => c.persons.includes(person));
@@ -514,6 +580,9 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
   function celebrate(p) {
     const k = `gefeiert-${p}-${today()}`;
     if (store.get(k)) return; store.set(k, "1");
+    confetti();
+  }
+  function confetti() {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const cv = $("confetti"), ctx = cv.getContext("2d"); cv.hidden = false;
     cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; ctx.scale(devicePixelRatio, devicePixelRatio);
@@ -569,6 +638,7 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
       cards = raw.filter((c) => !String(c.name).startsWith("ℹ️")).map((c) => parse(c, ln[c.idList]));
       byId = Object.fromEntries(cards.map((c) => [c.id, c]));
       try { await loadStats(); } catch (e) { stats = {}; }
+      try { await loadProgress(); } catch (e) { progress = {}; }
       if (yday === null) loadYesterday();
       $("foot").hidden = false;
       $("fresh").textContent = "Stand " + new Intl.DateTimeFormat("de-DE",{timeZone:TZ,hour:"2-digit",minute:"2-digit"}).format(new Date()) + " Uhr";
@@ -586,7 +656,7 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
   function login(msg) {
     $("foot").hidden = true; $("nav").innerHTML = ""; $("score").hidden = true;
     $("greet").innerHTML = `Was heute <em>zählt.</em>`;
-    $("main").innerHTML = `<div class="login"><div>${esc(msg || "Einmal mit Trello verbinden, dann siehst du hier jeden Tag deine wichtigsten Aufgaben, dein Tagesziel und den Stand im Team. Die Anmeldung bleibt in diesem Browser gespeichert.")}</div><button class="btn" id="login" type="button">Mit Trello verbinden</button></div>`;
+    $("main").innerHTML = `<div class="login"><div>${esc(msg || "Einmal mit Trello verbinden, dann siehst du hier jeden Tag deine wichtigsten Aufgaben, deine Fortschritte und den Stand im Team. Die Anmeldung bleibt in diesem Browser gespeichert.")}</div><button class="btn" id="login" type="button">Mit Trello verbinden</button></div>`;
     $("login").onclick = () => { location.href = "https://trello.com/1/authorize?" + new URLSearchParams({ expiration: "never", name: "Team-Tagesblick", scope: "read", response_type: "token", key: TRELLO_KEY, return_url: location.origin + location.pathname, callback_method: "fragment" }); };
   }
 
