@@ -105,6 +105,21 @@ details summary:hover{color:var(--green)}
 .btn:hover{background:var(--brass-2)}
 footer{border-top:1px solid var(--line);padding-block:18px 32px;display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--faint)}
 footer button{background:none;border:0;padding:0;color:var(--soft);text-decoration:underline;cursor:pointer;font:inherit}
+
+/* Glückskeks */
+.cookie{display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:16px 20px}
+.cookie button.k{background:none;border:0;padding:0;cursor:pointer;width:96px;height:72px;position:relative}
+.cookie svg{width:96px;height:72px;overflow:visible}
+.cookie .half{transition:transform .7s cubic-bezier(.2,.8,.2,1);transform-box:fill-box}
+.cookie .l{transform-origin:100% 80%} .cookie .r{transform-origin:0% 80%}
+.cookie.open .l{transform:rotate(-28deg) translate(-10px,4px)} .cookie.open .r{transform:rotate(28deg) translate(10px,4px)}
+.cookie:not(.open) button.k:hover svg{animation:wiggle .5s ease}
+@keyframes wiggle{25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+.slip{font:italic 300 21px/1.35 var(--f-serif);color:var(--text)}
+.slip small{display:block;font:500 12px var(--f-sans);font-style:normal;letter-spacing:.08em;text-transform:uppercase;color:var(--brass);margin-bottom:4px}
+.cookie.open .slip{animation:slip .7s .25s both ease}
+@keyframes slip{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.cookie .half,.cookie.open .slip{transition:none;animation:none}}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:10}
 </style>
 </head>
@@ -201,6 +216,62 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
   }
   function greeting() { const h = parseInt(new Intl.DateTimeFormat("en-GB",{timeZone:TZ,hour:"2-digit",hourCycle:"h23"}).format(new Date()), 10); return h < 11 ? "Guten Morgen" : h < 17 ? "Hallo" : "Guten Abend"; }
 
+
+  // ---------- Glückskeks: ein Spruch pro Person und Tag, selbst zu öffnen ----------
+  const FORTUNES = [
+    "Die Buy Box gehört heute dir. Zumindest gefühlt.",
+    "Eine erledigte Karte ist besser als drei perfekt geplante.",
+    "Heute ist ein guter Tag, um eine Mail endlich abzuschicken statt sie zu entwerfen.",
+    "Dein Kaffee glaubt an dich. Dein Posteingang auch, nur leiser.",
+    "Kleine Schritte zählen. Vor allem, wenn sie nach „Erledigt“ führen.",
+    "Amazon ändert heute vermutlich eine Regel. Du bleibst trotzdem entspannt.",
+    "Wer zuerst das Unangenehme erledigt, hat den Rest des Tages Ruhe.",
+    "Ein Appeal am Morgen vertreibt Kummer und Sorgen.",
+    "Deine To-do-Liste hat Angst vor dir. Zu Recht.",
+    "Heute wird ein Fünf-Sterne-Tag. Ohne gekaufte Bewertungen.",
+    "Manchmal ist „Wartet auf Kunde“ der entspannteste Ort der Welt.",
+    "Fokus ist, zu vier Dingen Nein zu sagen, damit eins fertig wird.",
+    "Du bist der ACoS-Senker unter den Menschen.",
+    "Pause machen ist auch Arbeit. Nur mit Keks.",
+    "Heute klappt der Flat-File-Upload beim ersten Versuch. Vielleicht.",
+    "Das Universum schickt dir heute keine Rückfrage. Nur Erfolge.",
+    "Was du heute erledigst, muss Claude morgen nicht dokumentieren.",
+    "Eine gute Karte hat einen Termin. Eine großartige ist erledigt.",
+    "Du hast schon schwierigere Kategorien überlebt als diese.",
+    "Heute wird nichts deaktiviert. Außer deine schlechte Laune.",
+    "Mut ist, die älteste Karte zuerst anzufassen.",
+    "Sei wie ein gutes Listing: klar, ehrlich und ohne Umweltversprechen.",
+    "Du musst nicht alles schaffen. Nur das Richtige.",
+    "Wenn es länger als zwei Minuten dauert: Karte. Wenn nicht: sofort machen.",
+    "Heute ist dein Prime Day.",
+    "Ein freundlicher Satz an den Kunden spart drei Nachfragen.",
+    "Die Serie wartet. Eine einzige erledigte Karte hält sie am Leben.",
+    "Lob dich heute einmal selbst. Am besten nach Karte Nummer drei.",
+    "Deine Zukunft dankt dir für jede Fälligkeit, die du heute einträgst.",
+    "Heute findest du den einen Fehler, den Amazon seit Wochen versteckt.",
+    "Erst die Frist, dann das Vergnügen. Danach wieder das Vergnügen.",
+    "Ruhig bleiben. Auch Seller Support hat mal einen guten Tag.",
+    "Wer Bilder hochlädt, wird gesehen.",
+    "Du bist heute die Person, die anderen den Tag leichter macht.",
+    "Fertig ist besser als perfekt. Perfekt ist besser als gar nicht. Fertig gewinnt.",
+    "Heute ist ein guter Tag für Häkchen.",
+    "Wenn nichts mehr geht: aufstehen, Wasser trinken, eine Karte erledigen.",
+    "Deine Konkurrenz liest gerade Glückskekse. Du arbeitest. Okay, jetzt auch.",
+    "Ein klarer Titel verkauft mehr als zehn kreative.",
+    "Heute verwandelst du ein „Ich schau mal“ in ein „Ist erledigt“.",
+  ];
+  function hash(str) { let h = 2166136261; for (const ch of str) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+  function fortune(p) { return FORTUNES[hash(p + today()) % FORTUNES.length]; }
+  function cookieHtml(p) {
+    const opened = store.get(`keks-${p}-${today()}`);
+    const svg = `<svg viewBox="0 0 96 72" aria-hidden="true"><g class="half l"><path d="M48 62 C26 62 8 50 8 34 C8 22 18 12 30 12 C40 12 46 20 48 30 Z" fill="#d9b77e" stroke="#b0894c" stroke-width="2"/><path d="M20 30 C24 26 30 25 36 28" stroke="#b0894c" stroke-width="1.5" fill="none" opacity=".6"/></g><g class="half r"><path d="M48 62 C70 62 88 50 88 34 C88 22 78 12 66 12 C56 12 50 20 48 30 Z" fill="#e3c38b" stroke="#b0894c" stroke-width="2"/><path d="M60 28 C66 25 72 26 76 30" stroke="#b0894c" stroke-width="1.5" fill="none" opacity=".6"/></g></svg>`;
+    return `<div class="cookie ${opened ? "open" : ""}" id="cookie"><button class="k" type="button" id="cookieBtn" aria-label="Glückskeks öffnen" ${opened ? "disabled" : ""}>${svg}</button><div class="slip" aria-live="polite">${opened ? `<small>Dein Glückskeks</small>${esc(fortune(p))}` : `<small>Glückskeks für ${esc(p)}</small>Tipp drauf, um ihn zu öffnen.`}</div></div>`;
+  }
+  function wireCookie(p) {
+    const b = $("cookieBtn"); if (!b || b.disabled) return;
+    b.onclick = () => { store.set(`keks-${p}-${today()}`, "1"); const el = $("cookie"); el.classList.add("open"); b.disabled = true; el.querySelector(".slip").innerHTML = `<small>Dein Glückskeks</small>${esc(fortune(p))}`; };
+  }
+
   // ---------- Rendern ----------
   function renderNav() {
     $("nav").innerHTML = PEOPLE.map((p) => `<button type="button" aria-pressed="${p === person}" data-p="${p}">${p}</button>`).join("");
@@ -239,7 +310,7 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
 
     // Heute
     const open = goal.filter((c) => !isDone(c.id)), closed = goal.filter((c) => isDone(c.id));
-    let html = `<section><h2>Heute <em>wichtig.</em></h2><p class="lead">Die ${total || ""} Aufgaben, die heute zählen. Sobald eine Karte in Trello auf „Erledigt“ liegt, wird sie hier abgehakt.</p>`;
+    let html = cookieHtml(person) + `<section><h2>Heute <em>wichtig.</em></h2><p class="lead">Die ${total || ""} Aufgaben, die heute zählen. Sobald eine Karte in Trello auf „Erledigt“ liegt, wird sie hier abgehakt.</p>`;
     if (won) { html += `<div class="win"><strong>Stark, <em>${esc(person)}</em>. Alles für heute erledigt.</strong><span>${s.streak > 1 ? `Das ist dein ${s.streak}. Arbeitstag in Folge. ` : ""}Was jetzt noch kommt, ist Bonus.</span></div>`; celebrate(person); }
     html += total ? `<ol class="today-list">${open.map((c) => todayItem(c, false)).join("")}${closed.map((c) => todayItem(c, true)).join("")}</ol>` : `<p class="empty">Nichts Offenes in „In Arbeit“. Schau im Board, ob etwas zugeteilt werden muss.</p>`;
     if (won) { const next = top(person).filter((c) => !ids.includes(c.id)).slice(0, 3); if (next.length) html += `<p class="bonus">Bonus, falls noch Luft ist</p><ol class="today-list">${next.map((c) => todayItem(c, false)).join("")}</ol>`; }
@@ -273,6 +344,7 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
 
     html += `<section><h2>Gesamt<em>überblick.</em></h2><p class="lead">Alle offenen Karten von ${esc(person)}, dazu der Stand im Team und das Kunden-Logbuch.</p><div class="overview"><div class="col">${left}</div><aside class="col"><div class="panel"><h3>Wer hat was</h3>${team}</div><div class="panel"><h3>Kunden-Logbuch</h3>${fd}</div></aside></div></section>`;
     $("main").innerHTML = html;
+    wireCookie(person);
   }
 
   // Konfetti einmal pro Person und Tag
