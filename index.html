@@ -107,6 +107,16 @@ footer{border-top:1px solid var(--line);padding-block:18px 32px;display:flex;gap
 footer button{background:none;border:0;padding:0;color:var(--soft);text-decoration:underline;cursor:pointer;font:inherit}
 
 
+
+/* Gestern-Rubrik */
+.yday{background:var(--green);color:var(--cream);border-radius:16px;padding:18px 22px;display:grid;gap:10px}
+.yday-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.yday h3{font:300 24px var(--f-serif);margin:0} .yday h3 em{color:var(--brass);font-style:italic}
+.yday-h span{font-size:12px;color:#f5f0e699}
+.yday ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.yday li{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:baseline;border-top:1px solid #f5f0e61f;padding-top:10px}
+.yday li b{font:600 13px var(--f-sans);color:var(--brass-2);text-transform:uppercase;letter-spacing:.08em}
+.yday li p{margin:0;font:italic 300 18px/1.4 var(--f-serif);color:var(--cream)}
 /* Rad-Wetter */
 .bike{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:16px 20px;display:grid;gap:12px}
 .bike-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
@@ -336,6 +346,67 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
     b.onclick = () => { store.set(`keks-${p}-${today()}`, "1"); const el = $("cookie"); el.classList.add("open"); b.disabled = true; el.querySelector(".slip").innerHTML = `<small>Dein Glückskeks</small>${esc(fortune(p))}`; };
   }
 
+
+  // ---------- Rubrik „Was gestern los war“ (satirisch, aus der Trello-Aktivität des letzten Arbeitstags) ----------
+  let yday = null; // null = lädt, false = Fehler, sonst {label, people:{Name:[Zeilen]}}
+  function prevWorkday() { const d = new Date(); do { d.setDate(d.getDate() - 1); } while (d.getDay() === 0 || d.getDay() === 6); return d; }
+  function seeded(seed) { let x = hash(seed) || 1; return () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return ((x >>> 0) % 10000) / 10000; }; }
+  const TOPICS = [
+    [/appeal|einspruch|widerspruch/i, ["schrieb Einsprüche an Amazon, so höflich, dass selbst der Algorithmus kurz gerührt war", "führte eine Brieffreundschaft mit dem Amazon-Appeal-Team, Antwort steht noch aus"]],
+    [/gpsr|hersteller|sicherheits|sdb/i, ["bewies Amazon zum wiederholten Mal, dass ein Produkt einen Hersteller hat", "verbrachte Zeit mit der Produktsicherheitsverordnung, die beiden sind jetzt per Du"]],
+    [/empco|umwelt|claim/i, ["strich so viele Umweltversprechen, dass die Listings jetzt CO2-neutral klingen, ohne es zu sagen", "jagte das Wort „nachhaltig“ durch sämtliche Bullets, bis es aufgab"]],
+    [/bild|foto|a\+|galerie/i, ["schob Bilder hin und her, bis jedes Pixel einen Termin hatte", "fragte sich, warum auf Produktfotos eigentlich nie jemand blinzelt"]],
+    [/titel|bullet|text|listing|seo/i, ["polierte Titel, bis sie glänzten und trotzdem unter 200 Zeichen blieben", "rang mit Bullets, die Bullets haben knapp verloren"]],
+    [/newsletter|flow/i, ["arbeitete an Newslettern, die bald sehr viele Menschen ungelesen archivieren werden, aber schön", "baute Flows, von denen niemand weiß, wohin sie fließen, außer Kirsten"]],
+    [/excel|tabelle|flat file|upload|datei/i, ["hatte eine innige Beziehung zu einer Excel-Datei, Status: kompliziert", "lud ein Flat File hoch und hielt dabei kurz den Atem an"]],
+    [/fall|support|case|ticket/i, ["eröffnete einen Seller-Support-Fall und lernt jetzt Geduld als Kernkompetenz", "erzählte dem Seller Support dieselbe Geschichte zum dritten Mal, diesmal mit Gefühl"]],
+    [/preis|rechnung|mwst|ust|vat/i, ["sprach mit Zahlen, die Zahlen haben zurückgesprochen", "verstand für einen kurzen Moment das europäische Mehrwertsteuersystem und vergaß es sofort wieder"]],
+    [/termin|call|meeting|weekly/i, ["saß in Calls, in denen beschlossen wurde, dass es noch einen Call braucht", "bereitete einen Termin vor, der jetzt besser vorbereitet ist als die meisten Hochzeiten"]],
+    [/mail|antwort|rückfrage|entwurf/i, ["schrieb Mails, manche davon sogar mit Absenden-Klick", "beantwortete Rückfragen, die Rückfragen erzeugten"]],
+  ];
+  const FALLBACK = ["arbeitete still und gründlich, wie ein Ninja mit Trello-Zugang", "erledigte Dinge, über die man nicht spricht, weil sie einfach funktionieren"];
+  const QUIET = ["war in Trello verdächtig ruhig. Entweder Urlaub, Deep Work oder ein sehr langer Kaffee.", "hinterließ gestern keine Spuren auf dem Board. Ein Phantom.", "hat Trello gestern geschont. Das Board bedankt sich."];
+  async function loadYesterday() {
+    try {
+      const d = prevWorkday(), start = new Date(d); start.setHours(0, 0, 0, 0); const end = new Date(start); end.setDate(end.getDate() + 1);
+      const fetchB = (b) => api(`/boards/${b}/actions`, { filter: "commentCard,updateCard:idList,createCard", since: start.toISOString(), before: end.toISOString(), limit: "500", memberCreator_fields: "fullName" });
+      const acts = (await Promise.all([fetchB(BOARD), fetchB(KUNDEN)])).flat();
+      const by = Object.fromEntries(PEOPLE.map((p) => [p, { n: 0, done: 0, cust: {}, text: "" }]));
+      for (const a of acts) {
+        const who = String((a.memberCreator && a.memberCreator.fullName) || "").split(" ")[0];
+        if (!by[who]) continue;
+        const txt = String((a.data && a.data.text) || "");
+        if (txt.startsWith("🤖")) continue; // Claude-Vorschläge zählen nicht
+        const name = String((a.data && a.data.card && a.data.card.name) || "");
+        const cust = name.split(" · ")[0].split(" (")[0].trim();
+        const b = by[who]; b.n++;
+        if (cust && cust.length < 30) b.cust[cust] = (b.cust[cust] || 0) + 1;
+        if (a.type === "updateCard" && /erledigt/i.test((a.data.listAfter && a.data.listAfter.name) || "")) b.done++;
+        b.text += " " + name + " " + txt;
+      }
+      const people = {};
+      for (const p of PEOPLE) {
+        const b = by[p], rnd = seeded(p + dayKey(d));
+        const pick = (arr) => arr[Math.floor(rnd() * arr.length)];
+        if (!b.n) { people[p] = pick(QUIET); continue; }
+        const topCust = Object.entries(b.cust).sort((x, y) => y[1] - x[1]).map(([c]) => c).slice(0, 2);
+        const hits = TOPICS.filter(([re]) => re.test(b.text)).map(([, l]) => l);
+        const line = hits.length ? pick(pick(hits)) : pick(FALLBACK);
+        let out = `${topCust.length ? `${topCust.join(" und ")}: ` : ""}${p} ${line}.`;
+        if (b.done >= 3) out += ` Nebenbei ${b.done} Karten erledigt, Angeber.`;
+        else if (b.done) out += ` Und hat ${b.done === 1 ? "eine Karte" : b.done + " Karten"} nach „Erledigt“ getragen.`;
+        else if (b.n >= 10) out += ` ${b.n} Aktionen auf dem Board, aber nichts erledigt. Klassischer Marathon ohne Ziellinie.`;
+        people[p] = out;
+      }
+      yday = { label: new Intl.DateTimeFormat("de-DE", { timeZone: TZ, weekday: "long", day: "numeric", month: "long" }).format(d), people };
+    } catch (e) { yday = false; }
+    if (cards) render();
+  }
+  function ydayHtml() {
+    if (yday === false || yday === null) return "";
+    return `<div class="yday"><div class="yday-h"><h3>Was gestern <em>los war.</em></h3><span>${esc(yday.label)} · frei nach Trello, nicht ganz ernst gemeint</span></div><ul>${PEOPLE.map((p) => `<li><b>${p}</b><p>${esc(yday.people[p])}</p></li>`).join("")}</ul></div>`;
+  }
+
   // ---------- Rendern ----------
   function renderNav() {
     $("nav").innerHTML = PEOPLE.map((p) => `<button type="button" aria-pressed="${p === person}" data-p="${p}">${p}</button>`).join("");
@@ -374,7 +445,7 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
 
     // Heute
     const open = goal.filter((c) => !isDone(c.id)), closed = goal.filter((c) => isDone(c.id));
-    let html = `<div style="display:grid;gap:14px">${cookieHtml(person)}${bikeHtml()}</div>` + `<section><h2>Heute <em>wichtig.</em></h2><p class="lead">Die ${total || ""} Aufgaben, die heute zählen. Sobald eine Karte in Trello auf „Erledigt“ liegt, wird sie hier abgehakt.</p>`;
+    let html = `<div style="display:grid;gap:14px">${cookieHtml(person)}${bikeHtml()}${ydayHtml()}</div>` + `<section><h2>Heute <em>wichtig.</em></h2><p class="lead">Die ${total || ""} Aufgaben, die heute zählen. Sobald eine Karte in Trello auf „Erledigt“ liegt, wird sie hier abgehakt.</p>`;
     if (won) { html += `<div class="win"><strong>Stark, <em>${esc(person)}</em>. Alles für heute erledigt.</strong><span>${s.streak > 1 ? `Das ist dein ${s.streak}. Arbeitstag in Folge. ` : ""}Was jetzt noch kommt, ist Bonus.</span></div>`; celebrate(person); }
     html += total ? `<ol class="today-list">${open.map((c) => todayItem(c, false)).join("")}${closed.map((c) => todayItem(c, true)).join("")}</ol>` : `<p class="empty">Nichts Offenes in „In Arbeit“. Schau im Board, ob etwas zugeteilt werden muss.</p>`;
     if (won) { const next = top(person).filter((c) => !ids.includes(c.id)).slice(0, 3); if (next.length) html += `<p class="bonus">Bonus, falls noch Luft ist</p><ol class="today-list">${next.map((c) => todayItem(c, false)).join("")}</ol>`; }
@@ -470,6 +541,7 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
       cards = raw.filter((c) => !String(c.name).startsWith("ℹ️")).map((c) => parse(c, ln[c.idList]));
       byId = Object.fromEntries(cards.map((c) => [c.id, c]));
       try { await loadStats(); } catch (e) { stats = {}; }
+      if (yday === null) loadYesterday();
       $("foot").hidden = false;
       $("fresh").textContent = "Stand " + new Intl.DateTimeFormat("de-DE",{timeZone:TZ,hour:"2-digit",minute:"2-digit"}).format(new Date()) + " Uhr";
       render();
