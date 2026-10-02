@@ -260,7 +260,7 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
         const codes = idx.map((i) => h.weather_code[i]);
         return { temp: pick("temperature_2m", (...v) => v.reduce((x, y) => x + y, 0) / v.length), feel: pick("apparent_temperature", Math.min), pop: pick("precipitation_probability", Math.max), mm: pick("precipitation", (...v) => v.reduce((x, y) => x + y, 0)), wind: pick("wind_speed_10m", Math.max), gust: pick("wind_gusts_10m", Math.max), code: Math.max(...codes) };
       };
-      wx = { hin: leg(WX.hin), rueck: leg(WX.rueck) };
+      wx = { hin: leg(WX.hin), rueck: leg(WX.rueck), padel: padelPlan(h) };
     } catch (e) { wx = false; }
     if (cards) render();
   }
@@ -289,6 +289,34 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
     if (wx === false) return `<div class="bike"><div class="bike-h"><h3>Rad-Wetter ${WX.ort}</h3><span>Wetterdaten gerade nicht erreichbar</span></div></div>`;
     const leg = (name, [a, b], l) => { const ad = bikeAdvice(l); return `<div class="leg"><span class="lbl">${name} · ${a}–${b} Uhr</span><div class="big"><b>${Math.round(l.temp)}°</b><span class="facts">gefühlt ${Math.round(l.feel)}° · ${esc(WCODE[l.code] || "")}</span></div><span class="facts">Regen ${Math.round(l.pop)} % · ${l.mm.toFixed(1)} mm · Wind ${Math.round(l.wind)} km/h, Böen ${Math.round(l.gust)}</span><span class="verdict ${ad.v.cls}">${esc(ad.v.txt)}</span><span class="wear">${esc(ad.wear)}</span></div>`; };
     return `<div class="bike"><div class="bike-h"><h3>Rad-Wetter ${WX.ort}</h3><span>Daten: Open-Meteo</span></div><div class="legs">${leg("Hinfahrt morgens", WX.hin, wx.hin)}${leg("Rückfahrt mittags", WX.rueck, wx.rueck)}</div></div>`;
+  }
+
+
+  // ---------- Padel-Check (nur für Jan): Outdoor-Wetter beim GTV + bester Zeitraum ----------
+  const PADEL_URL = "https://www.eversports.de/sb/gtv-club-tennis-point-guetersloh?sport=padel";
+  function padelPlan(h) {
+    const nowH = Number(new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", hourCycle: "h23" }).format(new Date()));
+    const hours = h.time.map((t, i) => ({ hr: Number(t.slice(11, 13)), i })).filter((x) => x.hr >= Math.max(8, nowH) && x.hr <= 21);
+    const ok = (i) => h.precipitation_probability[i] < 30 && h.precipitation[i] < 0.2 && h.weather_code[i] < 51 && h.wind_speed_10m[i] < 20 && h.wind_gusts_10m[i] < 35 && h.temperature_2m[i] >= 8 && h.temperature_2m[i] <= 32;
+    const score = (i) => 10 - Math.abs(h.temperature_2m[i] - 20) * 0.4 - h.wind_speed_10m[i] * 0.15 - h.precipitation_probability[i] * 0.05;
+    const good = hours.filter((x) => ok(x.i));
+    let best = null;
+    for (const x of hours) {
+      const y = hours.find((z) => z.hr === x.hr + 1);
+      if (!y || !ok(x.i) || !ok(y.i)) continue;
+      const sc = score(x.i) + score(y.i) + (x.hr >= 16 ? 1.5 : 0); // nach Feierabend leicht bevorzugt
+      if (!best || sc > best.sc) best = { from: x.hr, to: x.hr + 2, sc, temp: Math.round((h.temperature_2m[x.i] + h.temperature_2m[y.i]) / 2), wind: Math.round(Math.max(h.wind_speed_10m[x.i], h.wind_speed_10m[y.i])) };
+    }
+    return { goodHours: good.length, total: hours.length, best, first: good[0] && good[0].hr, last: good.length && good[good.length - 1].hr };
+  }
+  function padelHtml() {
+    if (person !== "Jan" || !wx || !wx.padel) return "";
+    const p = wx.padel;
+    if (!p.total) return "";
+    const body = p.best
+      ? `<span class="verdict go">Outdoor-Padel passt heute</span><span class="wear">Am besten <b>${p.best.from}–${p.best.to} Uhr</b>: etwa ${p.best.temp}°, Wind bis ${p.best.wind} km/h, trocken.${p.goodHours > 2 ? ` Spielbar insgesamt etwa ${p.first}–${p.last + 1} Uhr.` : ""}</span>`
+      : `<span class="verdict no">Heute eher nichts für draußen</span><span class="wear">Regen, Wind oder Temperatur passen in den verbleibenden Stunden nicht.</span>`;
+    return `<div class="bike"><div class="bike-h"><h3>Padel-Check <em style="font-style:italic;color:var(--brass)">für Jan</em></h3><span>GTV · Outdoor</span></div><div class="leg" style="border-top-color:var(--green)">${body}<a class="facts" href="${PADEL_URL}" target="_blank" rel="noopener" style="color:var(--green);font-weight:600">Freie Courts im GTV-Belegungsplan ansehen →</a></div></div>`;
   }
 
   // ---------- Glückskeks: ein Spruch pro Person und Tag, selbst zu öffnen ----------
@@ -445,7 +473,7 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
 
     // Heute
     const open = goal.filter((c) => !isDone(c.id)), closed = goal.filter((c) => isDone(c.id));
-    let html = `<div style="display:grid;gap:14px">${cookieHtml(person)}${bikeHtml()}${ydayHtml()}</div>` + `<section><h2>Heute <em>wichtig.</em></h2><p class="lead">Die ${total || ""} Aufgaben, die heute zählen. Sobald eine Karte in Trello auf „Erledigt“ liegt, wird sie hier abgehakt.</p>`;
+    let html = `<div style="display:grid;gap:14px">${cookieHtml(person)}${bikeHtml()}${padelHtml()}${ydayHtml()}</div>` + `<section><h2>Heute <em>wichtig.</em></h2><p class="lead">Die ${total || ""} Aufgaben, die heute zählen. Sobald eine Karte in Trello auf „Erledigt“ liegt, wird sie hier abgehakt.</p>`;
     if (won) { html += `<div class="win"><strong>Stark, <em>${esc(person)}</em>. Alles für heute erledigt.</strong><span>${s.streak > 1 ? `Das ist dein ${s.streak}. Arbeitstag in Folge. ` : ""}Was jetzt noch kommt, ist Bonus.</span></div>`; celebrate(person); }
     html += total ? `<ol class="today-list">${open.map((c) => todayItem(c, false)).join("")}${closed.map((c) => todayItem(c, true)).join("")}</ol>` : `<p class="empty">Nichts Offenes in „In Arbeit“. Schau im Board, ob etwas zugeteilt werden muss.</p>`;
     if (won) { const next = top(person).filter((c) => !ids.includes(c.id)).slice(0, 3); if (next.length) html += `<p class="bonus">Bonus, falls noch Luft ist</p><ol class="today-list">${next.map((c) => todayItem(c, false)).join("")}</ol>`; }
