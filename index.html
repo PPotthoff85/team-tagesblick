@@ -41,15 +41,37 @@ li a:hover{text-decoration:underline}
 .btn{font:600 15px var(--f-body);background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 16px;cursor:pointer;justify-self:start}
 footer{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
 footer button{background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit}
+
+.score{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.ring{width:64px;height:64px}
+.ring circle{fill:none;stroke-width:7}
+.ring .bg{stroke:var(--line)} .ring .fg{stroke:var(--accent);stroke-linecap:round;transition:stroke-dashoffset .6s ease}
+.ring.full .fg{stroke:var(--soon)}
+.ring text{font:700 17px var(--f-display);fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.stats{display:grid;gap:4px;min-width:0}
+.stats b{font-size:16px}
+.stats .sub{font-size:13px;color:var(--muted)}
+.streak{font-weight:600}
+.team{display:flex;gap:6px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.team span{background:var(--bg);border-radius:99px;padding:1px 9px}
+.team .me{background:var(--accent-soft);color:var(--accent);font-weight:600}
+li.done{opacity:.55}
+li.done a{text-decoration:line-through}
+li.done::before{content:"✓";color:var(--soon)}
+.win{margin-bottom:12px;background:var(--soon-soft);border:1px solid var(--soon);border-radius:14px;padding:16px;display:grid;gap:4px}
+.win strong{font:700 20px var(--f-display);color:var(--soon)}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:10}
 </style>
 </head>
 <body>
 <div class="wrap">
   <nav id="nav" aria-label="Person"></nav>
   <header><h1 id="who">Heute</h1><div class="date" id="date"></div></header>
+  <section id="score" hidden></section>
   <main id="main"><div class="note">Lade …</div></main>
   <footer id="foot" hidden><span id="fresh"></span><button type="button" id="reload">Aktualisieren</button><a id="board" href="https://trello.com/b/k3fIItIx/team-aufgaben" target="_blank" rel="noopener" style="color:inherit">Board öffnen</a><button type="button" id="logout">Abmelden</button></footer>
 </div>
+<canvas id="confetti" hidden></canvas>
 <script>
 (() => {
   const TRELLO_KEY = "c88c5be508ded6c9bb919e989ed54767"; // öffentlicher API-Schlüssel (Power-Up „Team Tagesblick“)
@@ -67,9 +89,8 @@ footer button{background:none;border:0;padding:0;color:var(--muted);text-decorat
   const hm = location.hash.match(/token=([0-9a-zA-Z]+)/);
   if (hm) { store.set("trello-token", hm[1]); history.replaceState(null, "", location.pathname); }
   let token = store.get("trello-token");
-  const hashPerson = PEOPLE.find((p) => location.hash.toLowerCase() === "#" + p.toLowerCase());
-  let person = hashPerson || store.get("tagesblick-tab");
-  let cards = null;
+  let person = store.get("tagesblick-tab");
+  let cards = null, byId = {};
 
   function bucket(list) {
     const n = (list || "").toLowerCase();
@@ -95,7 +116,7 @@ footer button{background:none;border:0;padding:0;color:var(--muted);text-decorat
     const parts = String(c.name).split(" · ");
     const customer = (c.labels && c.labels[0] && c.labels[0].name) || (parts.length > 1 ? parts[0] : "");
     const title = (parts.length > 1 ? parts.slice(1).join(" · ") : c.name).replace(/\s+—\s+[^—]*$/, "");
-    return { title, customer, url: c.shortUrl, persons: personsOf(c), bucket: bucket(listName), due: due(c), activity: new Date(c.dateLastActivity || 0) };
+    return { id: c.id, title, customer, url: c.shortUrl, persons: personsOf(c), bucket: bucket(listName), due: due(c), activity: new Date(c.dateLastActivity || 0) };
   }
 
   // Top 5: zuerst überfällig, heute, nächste 7 Tage (nach Datum); aufgefüllt mit „In Arbeit“ ohne nahe Frist, zuletzt bearbeitete zuerst.
@@ -108,17 +129,102 @@ footer button{background:none;border:0;padding:0;color:var(--muted);text-decorat
 
   function renderNav() {
     $("nav").innerHTML = PEOPLE.map((p) => `<button type="button" aria-pressed="${p === person}" data-p="${p}">${p}</button>`).join("");
-    $("nav").querySelectorAll("button").forEach((b) => b.onclick = () => { person = b.dataset.p; store.set("tagesblick-tab", person); history.replaceState(null, "", "#" + person.toLowerCase()); render(); });
+    $("nav").querySelectorAll("button").forEach((b) => b.onclick = () => { person = b.dataset.p; store.set("tagesblick-tab", person); render(); });
   }
+  // ---------- Tagesziel & Belohnung ----------
+  // Tagesziel = die Top-5-Liste beim ersten Öffnen des Tages (je Person, in diesem Browser).
+  // Geschafft = Karte liegt in „Erledigt“, ist als erledigt markiert oder archiviert.
+  const today = () => dayKey(new Date());
+  function goalFor(p) {
+    const k = `ziel-${p}-${today()}`;
+    let ids = null; try { ids = JSON.parse(store.get(k) || "null"); } catch (e) {}
+    if (!ids) { ids = top(p).map((c) => c.id); if (ids.length) store.set(k, JSON.stringify(ids)); }
+    return ids;
+  }
+  function isDone(id) { const c = byId[id]; return !c || c.bucket === "done" || c.dueComplete; }
+
+  function ring(done, total) {
+    const r = 26, C = 2 * Math.PI * r, frac = total ? done / total : 0;
+    return `<svg class="ring ${total && done === total ? "full" : ""}" viewBox="0 0 64 64" role="img" aria-label="${done} von ${total} geschafft"><circle class="bg" cx="32" cy="32" r="${r}"/><circle class="fg" cx="32" cy="32" r="${r}" transform="rotate(-90 32 32)" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}"/><text x="32" y="32">${done}/${total}</text></svg>`;
+  }
+
   function render() {
     renderNav();
     $("who").textContent = person ? `${person}, heute wichtig` : "Heute";
     if (!cards || !person) return;
-    const items = top(person);
-    $("main").innerHTML = items.length ? `<ol>${items.map((c) => {
-      const others = c.persons.filter((x) => x !== person);
-      return `<li><a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.title)}</a><div class="meta">${c.customer ? `<span class="chip">${esc(c.customer)}</span>` : ""}<span class="due ${c.due ? c.due.cls : "none"}">${esc(c.due ? c.due.label : "ohne Termin")}</span>${others.length ? `<span>mit ${esc(others.join(", "))}</span>` : ""}</div></li>`;
-    }).join("")}</ol>` : `<p class="empty">Nichts Offenes in „In Arbeit“. Schau ins Board, ob etwas zugeteilt werden muss.</p>`;
+    const ids = goalFor(person);
+    const goal = ids.map((id) => byId[id] ? byId[id] : { id, title: "Karte archiviert", customer: "", url: "#", persons: [], due: null, gone: true });
+    const done = ids.filter(isDone).length, total = ids.length;
+    const s = stats[person] || { today: 0, week: 0, streak: 0 };
+    const week = PEOPLE.map((p) => `<span class="${p === person ? "me" : ""}">${p} ${(stats[p] || {}).week || 0}</span>`).join("");
+    $("score").hidden = false;
+    $("score").innerHTML = `<div class="score">${ring(done, total)}<div class="stats"><b>${total ? (done === total ? "Tagesziel geschafft" : `Noch ${total - done} bis zum Tagesziel`) : "Heute kein Tagesziel"}</b><span class="sub"><span class="streak">${s.streak ? `🔥 ${s.streak} ${s.streak === 1 ? "Arbeitstag" : "Arbeitstage"} in Folge` : "Noch keine Serie – heute eine Karte erledigen startet sie"}</span> · heute ${s.today} erledigt</span><div class="team" title="Diese Woche nach „Erledigt“ verschobene Karten">Woche: ${week}</div></div></div>`;
+
+    const open = goal.filter((c) => !isDone(c.id)), closed = goal.filter((c) => isDone(c.id));
+    const li = (c, isClosed) => {
+      const others = (c.persons || []).filter((x) => x !== person);
+      return `<li class="${isClosed ? "done" : ""}"><a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.title)}</a><div class="meta">${c.customer ? `<span class="chip">${esc(c.customer)}</span>` : ""}${isClosed ? `<span class="due soon">erledigt</span>` : `<span class="due ${c.due ? c.due.cls : "none"}">${esc(c.due ? c.due.label : "ohne Termin")}</span>`}${others.length ? `<span>mit ${esc(others.join(", "))}</span>` : ""}</div></li>`;
+    };
+    let html = "";
+    if (total && done === total) {
+      html += `<div class="win"><strong>Stark, ${esc(person)}! Alles für heute erledigt.</strong><span>${s.streak > 1 ? `Das ist dein ${s.streak}. Arbeitstag in Folge. ` : ""}Was jetzt noch kommt, ist Bonus.</span></div>`;
+      celebrate(person);
+    }
+    html += total ? `<ol>${open.map((c) => li(c, false)).join("")}${closed.map((c) => li(c, true)).join("")}</ol>` : `<p class="empty">Nichts Offenes in „In Arbeit“. Schau ins Board, ob etwas zugeteilt werden muss.</p>`;
+    if (total && done === total) {
+      const next = top(person).filter((c) => !ids.includes(c.id)).slice(0, 3);
+      if (next.length) html += `<p class="note" style="margin:18px 0 6px">Bonus, falls noch Luft ist:</p><ol>${next.map((c) => li(c, false)).join("")}</ol>`;
+    }
+    $("main").innerHTML = html;
+  }
+
+  // Konfetti einmal pro Person und Tag (nicht bei reduzierter Bewegung)
+  function celebrate(p) {
+    const k = `gefeiert-${p}-${today()}`;
+    if (store.get(k)) return; store.set(k, "1");
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const cv = $("confetti"), ctx = cv.getContext("2d"); cv.hidden = false;
+    cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; ctx.scale(devicePixelRatio, devicePixelRatio);
+    const cols = ["#2453c7", "#1e7a4c", "#f0b55c", "#c2341d", "#7d9cf5"];
+    const parts = Array.from({ length: 140 }, () => ({ x: innerWidth / 2, y: innerHeight * 0.35, vx: (Math.random() - 0.5) * 12, vy: -Math.random() * 11 - 3, s: 4 + Math.random() * 5, c: cols[Math.floor(Math.random() * cols.length)], r: Math.random() * 6 }));
+    let t = 0;
+    (function frame() {
+      ctx.clearRect(0, 0, innerWidth, innerHeight);
+      parts.forEach((q) => { q.vy += 0.28; q.x += q.vx; q.y += q.vy; q.r += 0.1; ctx.save(); ctx.translate(q.x, q.y); ctx.rotate(q.r); ctx.fillStyle = q.c; ctx.fillRect(-q.s / 2, -q.s / 4, q.s, q.s / 2); ctx.restore(); });
+      if (++t < 160) requestAnimationFrame(frame); else { ctx.clearRect(0, 0, innerWidth, innerHeight); cv.hidden = true; }
+    })();
+  }
+
+  // ---------- Statistik aus Trello: wer hat wann Karten nach „Erledigt“ gebracht ----------
+  let stats = {};
+  async function loadStats(listNames) {
+    const since = new Date(Date.now() - 21 * 864e5).toISOString();
+    const acts = await api(`/boards/${BOARD}/actions`, { filter: "updateCard:idList", since, limit: "1000", fields: "data,date", memberCreator: "false" });
+    const doneDays = Object.fromEntries(PEOPLE.map((p) => [p, new Set()]));
+    const counts = Object.fromEntries(PEOPLE.map((p) => [p, { today: 0, week: 0 }]));
+    const seen = new Set();
+    const now = new Date(), t = today();
+    const monday = new Date(now); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+    for (const a of acts) {
+      const after = a.data && a.data.listAfter && a.data.listAfter.name || "";
+      if (!after.toLowerCase().includes("erledigt")) continue;
+      const cid = a.data.card && a.data.card.id; if (!cid || seen.has(cid)) continue; seen.add(cid);
+      const c = byId[cid];
+      const who = c ? c.persons : PEOPLE.filter((p) => String(a.data.card.name || "").split("—").pop().includes(p));
+      const d = new Date(a.date), k = dayKey(d);
+      for (const p of who) { doneDays[p].add(k); if (k === t) counts[p].today++; if (d >= monday) counts[p].week++; }
+    }
+    // Serie: aufeinanderfolgende Arbeitstage (Mo–Fr) mit mindestens einer erledigten Karte. Heute zählt mit, bricht die Serie aber noch nicht.
+    for (const p of PEOPLE) {
+      let streak = 0; const d = new Date();
+      if (!doneDays[p].has(dayKey(d))) d.setDate(d.getDate() - 1);
+      for (let i = 0; i < 21; i++) {
+        const wd = d.getDay();
+        if (wd !== 0 && wd !== 6) { if (doneDays[p].has(dayKey(d))) streak++; else break; }
+        d.setDate(d.getDate() - 1);
+      }
+      stats[p] = { ...counts[p], streak };
+    }
   }
 
   async function api(path, params) {
@@ -139,7 +245,9 @@ footer button{background:none;border:0;padding:0;color:var(--muted);text-decorat
         api(`/boards/${BOARD}/cards`, { fields: "name,due,dueComplete,idList,labels,shortUrl,dateLastActivity", members: "true", member_fields: "fullName" }),
       ]);
       const ln = Object.fromEntries(lists.map((l) => [l.id, l.name]));
-      cards = raw.filter((c) => !String(c.name).startsWith("ℹ️")).map((c) => parse(c, ln[c.idList]));
+      cards = raw.filter((c) => !String(c.name).startsWith("ℹ️")).map((c) => ({ ...parse(c, ln[c.idList]), dueComplete: !!c.dueComplete }));
+      byId = Object.fromEntries(cards.map((c) => [c.id, c]));
+      try { await loadStats(); } catch (e) { stats = {}; }
       $("foot").hidden = false;
       $("fresh").textContent = "Stand " + new Intl.DateTimeFormat("de-DE",{timeZone:TZ,hour:"2-digit",minute:"2-digit"}).format(new Date()) + " Uhr";
       render();
