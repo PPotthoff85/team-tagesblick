@@ -106,6 +106,22 @@ details summary:hover{color:var(--green)}
 footer{border-top:1px solid var(--line);padding-block:18px 32px;display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--faint)}
 footer button{background:none;border:0;padding:0;color:var(--soft);text-decoration:underline;cursor:pointer;font:inherit}
 
+
+/* Rad-Wetter */
+.bike{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:16px 20px;display:grid;gap:12px}
+.bike-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.bike-h h3{font:400 22px var(--f-serif);margin:0}
+.bike-h span{font-size:12px;color:var(--faint)}
+.legs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:620px){.legs{grid-template-columns:minmax(0,1fr)}}
+.leg{border-top:2px solid var(--brass);padding-top:10px;display:grid;gap:6px;min-width:0}
+.leg .lbl{font:600 11px var(--f-sans);text-transform:uppercase;letter-spacing:.12em;color:var(--soft)}
+.leg .big{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.leg .big b{font:300 34px/1 var(--f-serif)}
+.leg .facts{font-size:13px;color:var(--soft)}
+.verdict{font-size:12.5px;font-weight:600;padding:2px 10px;border-radius:99px;justify-self:start}
+.verdict.go{background:var(--soon-bg);color:var(--soon)} .verdict.maybe{background:var(--today-bg);color:var(--today)} .verdict.no{background:var(--late-bg);color:var(--late)}
+.wear{font-size:14px;color:var(--text)}
 /* Glückskeks */
 .cookie{display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:16px 20px}
 .cookie button.k{background:none;border:0;padding:0;cursor:pointer;width:96px;height:72px;position:relative}
@@ -217,6 +233,54 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
   function greeting() { const h = parseInt(new Intl.DateTimeFormat("en-GB",{timeZone:TZ,hour:"2-digit",hourCycle:"h23"}).format(new Date()), 10); return h < 11 ? "Guten Morgen" : h < 17 ? "Hallo" : "Guten Abend"; }
 
 
+
+  // ---------- Rad-Wetter Gütersloh (Open-Meteo, ohne Schlüssel) ----------
+  const WX = { lat: 51.9065, lon: 8.3786, ort: "Gütersloh", hin: [7, 9], rueck: [12, 14] };
+  let wx = null; // null = lädt, false = Fehler
+  const WCODE = { 0:"klar",1:"überwiegend klar",2:"teils bewölkt",3:"bewölkt",45:"Nebel",48:"Reifnebel",51:"leichter Niesel",53:"Niesel",55:"starker Niesel",56:"gefrierender Niesel",57:"gefrierender Niesel",61:"leichter Regen",63:"Regen",65:"starker Regen",66:"gefrierender Regen",67:"gefrierender Regen",71:"leichter Schnee",73:"Schnee",75:"starker Schnee",77:"Schneegriesel",80:"Regenschauer",81:"Regenschauer",82:"heftige Schauer",85:"Schneeschauer",86:"Schneeschauer",95:"Gewitter",96:"Gewitter mit Hagel",99:"Gewitter mit Hagel" };
+  async function loadWeather() {
+    try {
+      const q = new URLSearchParams({ latitude: WX.lat, longitude: WX.lon, hourly: "temperature_2m,apparent_temperature,precipitation_probability,precipitation,wind_speed_10m,wind_gusts_10m,weather_code", timezone: TZ, forecast_days: "1", wind_speed_unit: "kmh" });
+      const r = await fetch("https://api.open-meteo.com/v1/forecast?" + q);
+      if (!r.ok) throw new Error(r.status);
+      const h = (await r.json()).hourly;
+      const leg = ([a, b]) => {
+        const idx = h.time.map((t, i) => [Number(t.slice(11, 13)), i]).filter(([hr]) => hr >= a && hr <= b).map(([, i]) => i);
+        const pick = (k, f) => f(...idx.map((i) => h[k][i]));
+        const codes = idx.map((i) => h.weather_code[i]);
+        return { temp: pick("temperature_2m", (...v) => v.reduce((x, y) => x + y, 0) / v.length), feel: pick("apparent_temperature", Math.min), pop: pick("precipitation_probability", Math.max), mm: pick("precipitation", (...v) => v.reduce((x, y) => x + y, 0)), wind: pick("wind_speed_10m", Math.max), gust: pick("wind_gusts_10m", Math.max), code: Math.max(...codes) };
+      };
+      wx = { hin: leg(WX.hin), rueck: leg(WX.rueck) };
+    } catch (e) { wx = false; }
+    if (cards) render();
+  }
+  function bikeAdvice(l) {
+    const wet = l.pop >= 60 || l.mm >= 1, damp = !wet && (l.pop >= 30 || l.mm > 0.1);
+    const storm = l.code >= 95 || l.gust >= 60, ice = l.temp <= 1 && (l.mm > 0 || [56,57,66,67,71,73,75,77,85,86].includes(l.code));
+    let v = { cls: "go", txt: "Gut fürs Rad" };
+    if (storm || ice) v = { cls: "no", txt: storm ? "Lieber nicht: Gewitter/Sturmböen" : "Lieber nicht: Glätte möglich" };
+    else if (wet || l.gust >= 45) v = { cls: "maybe", txt: wet ? "Machbar, aber nass" : "Machbar, starker Wind" };
+    else if (damp) v = { cls: "go", txt: "Gut fürs Rad, kleines Schauerrisiko" };
+    const f = l.feel, wear = [];
+    if (f >= 20) wear.push("T-Shirt und kurze Hose");
+    else if (f >= 15) wear.push("T-Shirt, dünne Jacke oder Pulli dabei");
+    else if (f >= 10) wear.push("Lange Hose und leichte Jacke");
+    else if (f >= 5) wear.push("Warme Jacke, dünne Handschuhe");
+    else if (f >= 0) wear.push("Winterjacke, Handschuhe, Mütze unter den Helm");
+    else wear.push("Dick einpacken: Winterjacke, warme Handschuhe, Mütze, Schal");
+    if (wet) wear.push("Regenjacke und Regenhose");
+    else if (damp) wear.push("Regenjacke einpacken");
+    if (l.wind >= 25 && f < 15) wear.push("winddichte Schicht");
+    if (l.code <= 1 && f >= 15) wear.push("Sonnenbrille");
+    return { v, wear: wear.join(" · ") };
+  }
+  function bikeHtml() {
+    if (wx === null) return `<div class="bike"><div class="bike-h"><h3>Rad-Wetter ${WX.ort}</h3><span>lädt …</span></div></div>`;
+    if (wx === false) return `<div class="bike"><div class="bike-h"><h3>Rad-Wetter ${WX.ort}</h3><span>Wetterdaten gerade nicht erreichbar</span></div></div>`;
+    const leg = (name, [a, b], l) => { const ad = bikeAdvice(l); return `<div class="leg"><span class="lbl">${name} · ${a}–${b} Uhr</span><div class="big"><b>${Math.round(l.temp)}°</b><span class="facts">gefühlt ${Math.round(l.feel)}° · ${esc(WCODE[l.code] || "")}</span></div><span class="facts">Regen ${Math.round(l.pop)} % · ${l.mm.toFixed(1)} mm · Wind ${Math.round(l.wind)} km/h, Böen ${Math.round(l.gust)}</span><span class="verdict ${ad.v.cls}">${esc(ad.v.txt)}</span><span class="wear">${esc(ad.wear)}</span></div>`; };
+    return `<div class="bike"><div class="bike-h"><h3>Rad-Wetter ${WX.ort}</h3><span>Daten: Open-Meteo</span></div><div class="legs">${leg("Hinfahrt morgens", WX.hin, wx.hin)}${leg("Rückfahrt mittags", WX.rueck, wx.rueck)}</div></div>`;
+  }
+
   // ---------- Glückskeks: ein Spruch pro Person und Tag, selbst zu öffnen ----------
   const FORTUNES = [
     "Die Buy Box gehört heute dir. Zumindest gefühlt.",
@@ -310,7 +374,7 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
 
     // Heute
     const open = goal.filter((c) => !isDone(c.id)), closed = goal.filter((c) => isDone(c.id));
-    let html = cookieHtml(person) + `<section><h2>Heute <em>wichtig.</em></h2><p class="lead">Die ${total || ""} Aufgaben, die heute zählen. Sobald eine Karte in Trello auf „Erledigt“ liegt, wird sie hier abgehakt.</p>`;
+    let html = `<div style="display:grid;gap:14px">${cookieHtml(person)}${bikeHtml()}</div>` + `<section><h2>Heute <em>wichtig.</em></h2><p class="lead">Die ${total || ""} Aufgaben, die heute zählen. Sobald eine Karte in Trello auf „Erledigt“ liegt, wird sie hier abgehakt.</p>`;
     if (won) { html += `<div class="win"><strong>Stark, <em>${esc(person)}</em>. Alles für heute erledigt.</strong><span>${s.streak > 1 ? `Das ist dein ${s.streak}. Arbeitstag in Folge. ` : ""}Was jetzt noch kommt, ist Bonus.</span></div>`; celebrate(person); }
     html += total ? `<ol class="today-list">${open.map((c) => todayItem(c, false)).join("")}${closed.map((c) => todayItem(c, true)).join("")}</ol>` : `<p class="empty">Nichts Offenes in „In Arbeit“. Schau im Board, ob etwas zugeteilt werden muss.</p>`;
     if (won) { const next = top(person).filter((c) => !ids.includes(c.id)).slice(0, 3); if (next.length) html += `<p class="bonus">Bonus, falls noch Luft ist</p><ol class="today-list">${next.map((c) => todayItem(c, false)).join("")}</ol>`; }
@@ -439,6 +503,8 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
   $("logout").onclick = () => { store.del("trello-token"); token = null; cards = null; login(); };
   setInterval(() => token && document.visibilityState === "visible" && load(), 10 * 60 * 1000);
   boot();
+  loadWeather();
+  setInterval(loadWeather, 30 * 60 * 1000);
 })();
 </script>
 </body>
