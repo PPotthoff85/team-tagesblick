@@ -204,7 +204,7 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
 <script>
 (() => {
   const TRELLO_KEY = "c88c5be508ded6c9bb919e989ed54767"; // öffentlicher API-Schlüssel (Power-Up „Team Tagesblick“)
-  const BOARD = "k3fIItIx", KUNDEN = "iXxM8zrq";
+  const BOARD = "k3fIItIx", KUNDEN = "iXxM8zrq", KURIER = "6abfb382de0c3504c83231b0";
   const PEOPLE = ["Patrick", "Kirsten", "Jan"];
   const TZ = "Europe/Berlin", MAX = 5;
   const $ = (id) => document.getElementById(id);
@@ -478,8 +478,12 @@ footer button{background:none;border:0;padding:0;color:var(--soft);text-decorati
         const stat = `Bilanz: ${n} ${n === 1 ? "Karte" : "Karten"} bewegt${b.done ? `, ${b.done} erledigt` : ""}${b.comments ? `, ${b.comments} ${b.comments === 1 ? "Notiz" : "Notizen"}` : ""}. ${pick(BILANZ)}`;
         people[p] = { head, text: sents.join(" "), chips: topCust, stat };
       }
+      // Echte Satire vom Morgen-Lauf (Claude schreibt sie auf die archivierte Datenkarte); sonst Stichwort-Version
+      let kurier = null;
+      try { const kc = await api(`/cards/${KURIER}`, { fields: "desc" }); const j = JSON.parse(kc.desc || "{}"); if (j.day === dayKey(d)) kurier = j; } catch (e) {}
+      if (kurier) for (const p of PEOPLE) { const k = kurier.people && kurier.people[p]; if (k && k.text) people[p] = { ...people[p], head: k.head || people[p].head, text: k.text }; }
       const fazit = teamCards ? `Gemeinsam ${teamCards} ${teamCards === 1 ? "Karte" : "Karten"} bewegt${teamDone ? ` und ${teamDone} erledigt` : ""}. Die Redaktion ist beeindruckt und gönnt sich einen Keks.` : "Ein ruhiger Tag auf dem Board. Auch Ruhetage gehören zum Erfolg.";
-      yday = { label: new Intl.DateTimeFormat("de-DE", { timeZone: TZ, weekday: "long", day: "numeric", month: "long" }).format(d), people, fazit };
+      yday = { label: new Intl.DateTimeFormat("de-DE", { timeZone: TZ, weekday: "long", day: "numeric", month: "long" }).format(d), people, fazit: (kurier && kurier.fazit) || fazit };
     } catch (e) { yday = false; }
     if (cards) render();
   }
