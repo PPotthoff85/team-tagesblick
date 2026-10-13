@@ -23,7 +23,7 @@ mkdir -p "$TMP/src" && tar -C "$QUELLE" --exclude=.git --exclude=node_modules --
     --template-error "Passwort falsch." \
     --template-toggle-show "Passwort zeigen" --template-toggle-hide "Passwort verbergen" \
     --template-color-primary "#22372d" --template-color-secondary "#f5f0e6" >/dev/null )
-find "$ZIEL" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+find "$ZIEL" -mindepth 1 -maxdepth 1 ! -name .git ! -name CLAUDE.md -exec rm -rf {} +
 cp -a "$TMP/out/src/." "$ZIEL/"
 rm -rf "$TMP"
 echo "verschlüsselt: $(find "$ZIEL" -name '*.html' -not -path '*/.git/*' | wc -l) HTML-Dateien"
